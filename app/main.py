@@ -1,0 +1,61 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
+
+# FastAPI 앱 생성
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    description="LastDance - 전시 관람 경험 플랫폼 API",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# CORS 설정 (iOS 앱에서 접근 가능하도록)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 프로덕션에서는 특정 도메인만 허용
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# 헬스체크 엔드포인트
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """
+    서버 상태 확인용 헬스체크 API
+    """
+    return {
+        "status": "healthy",
+        "service": settings.PROJECT_NAME,
+        "version": "1.0.0"
+    }
+
+
+# 루트 엔드포인트
+@app.get("/", tags=["Root"])
+async def root():
+    """
+    API 루트 - 간단한 환영 메시지
+    """
+    return {
+        "docs": "/docs",
+        "health": "/health"
+    }
+
+
+# API v1 라우터 등록 (나중에 추가)
+# from app.api.v1 import api_router
+# app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True  # 개발 모드: 코드 변경 시 자동 재시작
+    )
