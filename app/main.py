@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
+from app.api.v1 import api_router
 
 # FastAPI 앱 생성
 app = FastAPI(
@@ -14,7 +15,7 @@ app = FastAPI(
 # CORS 설정 (iOS 앱에서 접근 가능하도록)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 프로덕션에서는 특정 도메인만 허용
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,9 +47,8 @@ async def root():
     }
 
 
-# API v1 라우터 등록 (나중에 추가)
-# from app.api.v1 import api_router
-# app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+# API v1 라우터 등록
+app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
 if __name__ == "__main__":
