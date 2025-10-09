@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import admin, users, exhibitions, artworks, reviews, visits
+from app.api.v1.endpoints import admin, users, exhibitions, artworks, reviews, visits, artists
 
 api_router = APIRouter()
 
@@ -10,3 +10,4 @@ api_router.include_router(exhibitions.router, prefix="/exhibitions", tags=["Exhi
 api_router.include_router(artworks.router, prefix="/artworks", tags=["Artworks"])
 api_router.include_router(reviews.router, prefix="/reviews", tags=["Reviews"])
 api_router.include_router(visits.router, prefix="/visits", tags=["Visits"])
+api_router.include_router(artists.router, prefix="/artists", tags=["Artists"])

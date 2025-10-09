@@ -110,18 +110,20 @@ async def create_exhibition(
 @router.put("/exhibitions/{exhibition_id}", response_model=ExhibitionResponse)
 async def update_exhibition(
     exhibition_id: int,
-    title: Optional[str] = None,
-    description: Optional[str] = None,
-    location: Optional[str] = None,
-    poster_url: Optional[str] = None,
-    artist_names: Optional[List[str]] = None,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
+    title: Optional[str] = Form(None), 
+    description: Optional[str] = Form(None),
+    location: Optional[str] = Form(None),
+    poster_url: Optional[str] = Form(None),
+    artist_names: Optional[str] = Form(None), 
+    start_date: Optional[date] = Form(None),
+    end_date: Optional[date] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
     전시 수정 (관리자용)
     """
+    import json
+    
     db_exhibition = db.query(Exhibition).filter(Exhibition.id == exhibition_id).first()
     if not db_exhibition:
         raise HTTPException(status_code=404, detail="Exhibition not found")
@@ -135,8 +137,12 @@ async def update_exhibition(
         db_exhibition.location = location
     if poster_url is not None:
         db_exhibition.poster_url = poster_url
-    if artist_names is not None:
-        db_exhibition.artist_names = artist_names
+    if artist_names is not None: 
+        try:
+            artist_names_list = json.loads(artist_names)
+            db_exhibition.artist_names = artist_names_list
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="artist_names must be a valid JSON array")
     if start_date is not None:
         db_exhibition.start_date = start_date
     if end_date is not None:
