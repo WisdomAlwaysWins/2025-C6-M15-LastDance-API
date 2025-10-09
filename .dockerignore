@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# FastAPI
+.pytest_cache/
+
+# Environment
+.env
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+
+# Alembic
+alembic/versions/*.pyc
+
+# Docker
+docker-compose.override.yml
+
+# Test
+test_*.py
+tests/
+
+# Uploads
+uploads/
+temp/
