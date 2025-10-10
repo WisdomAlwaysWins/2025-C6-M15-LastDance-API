@@ -13,13 +13,16 @@ from app.config import settings
 from app.database import Base
 # 모든 모델을 임포트해야 Alembic이 인식함!
 from app.models import (
-    User, 
-    Exhibition, 
-    Artwork, 
-    Tag, 
-    Review, 
+    User,
+    Artist,
+    Venue,
+    Exhibition,
+    Artwork,
+    Reaction,
+    Tag,
     VisitHistory,
-    review_tags
+    exhibition_artists,
+    reaction_tags
 )
 
 # this is the Alembic Config object
