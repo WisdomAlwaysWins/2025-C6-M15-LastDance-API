@@ -4,7 +4,7 @@ from typing import List, Optional
 import json
 
 from app.database import get_db
-from app.models.review import Review
+from app.models.reaction import Review
 from app.models.artwork import Artwork
 from app.models.tag import Tag
 from app.models.user import User

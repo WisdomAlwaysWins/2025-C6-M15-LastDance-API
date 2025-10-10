@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models.visit_history import VisitHistory
 from app.models.user import User
 from app.models.exhibition import Exhibition
-from app.models.review import Review
+from app.models.reaction import Review
 from app.models.artwork import Artwork
 from app.schemas.visit_history import VisitHistoryCreate, VisitHistoryResponse
 
