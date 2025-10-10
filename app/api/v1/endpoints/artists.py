@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models.user import User, UserType
 from app.models.exhibition import Exhibition
 from app.models.artwork import Artwork
-from app.models.review import Review
+from app.models.reaction import Review
 
 router = APIRouter()
 
