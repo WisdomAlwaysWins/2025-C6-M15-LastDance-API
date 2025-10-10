@@ -8,7 +8,7 @@ from app.models.reaction import Review
 from app.models.artwork import Artwork
 from app.models.tag import Tag
 from app.models.user import User
-from app.schemas.review import ReviewCreate, ReviewResponse
+from app.schemas.reaction import ReviewCreate, ReviewResponse
 from app.utils.s3_client import s3_client
 
 router = APIRouter()
