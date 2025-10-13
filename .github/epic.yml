@@ -1,0 +1,70 @@
+name: 🎯 Epic
+description: 대규모 작업 단위
+title: "🎯 Epic: "
+labels: ["Epic"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 🎯 목표
+      description: 이 Epic을 통해 달성하고자 하는 목표
+      placeholder: 예) DB 모델 변경에 따른 전체 Schema 재작성
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 우선순위
+      options:
+        - P0 - Critical (필수)
+        - P1 - High (중요)
+        - P2 - Medium (보통)
+        - P3 - Low (낮음)
+    validations:
+      required: true
+
+  - type: input
+    id: story-points
+    attributes:
+      label: 📊 Story Points
+      placeholder: 예) 16
+    validations:
+      required: false
+
+  - type: input
+    id: sprint
+    attributes:
+      label: 🏃 Sprint
+      placeholder: 예) Sprint 1 (Day 1)
+    validations:
+      required: false
+
+  - type: textarea
+    id: stories
+    attributes:
+      label: 📝 포함된 Story 목록
+      placeholder: |
+        - [ ] #이슈번호 Story 제목
+        - [ ] #이슈번호 Story 제목
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: ✅ 완료 조건
+      placeholder: |
+        - [ ] 모든 Story 완료
+        - [ ] 테스트 통과
+        - [ ] 문서 업데이트
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 💡 참고사항
+      placeholder: 특이사항, 의존성, 블로커 등
+    validations:
+      required: false
