@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from sqlalchemy.sql import func
 from app.database import Base
 
 
@@ -11,19 +11,19 @@ class Artwork(Base):
     __tablename__ = "artworks"
 
     id = Column(Integer, primary_key=True, index=True)
-    exhibition_id = Column(Integer, ForeignKey("exhibitions.id", ondelete="CASCADE"), nullable=False, comment="전시 ID")
-    artist_id = Column(Integer, ForeignKey("artists.id", ondelete="SET NULL"), nullable=True, comment="작가 ID")
-    title = Column(String(255), nullable=False, comment="작품 제목")
-    description = Column(Text, nullable=True, comment="작품 설명")
-    year = Column(Integer, nullable=True, comment="제작 연도")
-    thumbnail_url = Column(String(500), nullable=False, comment="작품 이미지 URL")
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    exhibition_id = Column(Integer, ForeignKey("exhibitions.id"), nullable=False)
+    artist_id = Column(Integer, ForeignKey("artists.id"), nullable=False)  # 🆕 추가
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)  # 🆕 추가
+    year = Column(Integer, nullable=True)  # 🆕 추가
+    thumbnail_url = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # 관계
+    # Relationships
     exhibition = relationship("Exhibition", back_populates="artworks")
-    artist = relationship("Artist", back_populates="artworks")
-    reactions = relationship("Reaction", back_populates="artwork")
+    artist = relationship("Artist", back_populates="artworks")  # 🆕 추가
+    reactions = relationship("Reaction", back_populates="artwork", cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<Artwork(id={self.id}, title='{self.title}')>"
+        return f"<Artwork(id={self.id}, title={self.title})>"

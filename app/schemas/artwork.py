@@ -1,34 +1,61 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.schemas.artist import ArtistResponse
+    from app.schemas.exhibition import ExhibitionResponse
+    from app.schemas.reaction import ReactionResponse
 
 
-class ArtworkBase(BaseModel):
-    """Artwork 기본 스키마"""
-    title: str = Field(..., max_length=255, description="작품 제목")
-    artist_name: str = Field(..., max_length=100, description="작가 이름")
-    description: Optional[str] = Field(None, description="작품 설명")
-    year: Optional[int] = Field(None, description="제작 연도")
-    image_url: str = Field(..., max_length=500, description="작품 원본 이미지 URL")
-    exhibition_id: int = Field(..., description="전시 ID")
-
-
-class ArtworkCreate(ArtworkBase):
-    """Artwork 생성 요청 스키마"""
-    pass
+class ArtworkCreate(BaseModel):
+    """작품 생성"""
+    exhibition_id: int
+    artist_id: int
+    title: str
+    description: Optional[str] = None
+    year: Optional[int] = None
+    thumbnail_url: Optional[str] = None
 
 
 class ArtworkUpdate(BaseModel):
-    """Artwork 수정 요청 스키마"""
-    title: Optional[str] = Field(None, max_length=255, description="작품 제목")
-    artist_name: Optional[str] = Field(None, max_length=100, description="작가 이름")
-    description: Optional[str] = Field(None, description="작품 설명")
-    year: Optional[int] = Field(None, description="제작 연도")
-    image_url: Optional[str] = Field(None, max_length=500, description="작품 원본 이미지 URL")
+    """작품 수정"""
+    exhibition_id: Optional[int] = None
+    artist_id: Optional[int] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    year: Optional[int] = None
+    thumbnail_url: Optional[str] = None
 
 
-class ArtworkResponse(ArtworkBase):
-    """Artwork 응답 스키마"""
+class ArtworkResponse(BaseModel):
+    """작품 응답 (기본)"""
     id: int
+    exhibition_id: int
+    artist_id: int
+    title: str
+    description: Optional[str] = None
+    year: Optional[int] = None
+    thumbnail_url: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
+
+
+class ArtworkDetailResponse(BaseModel):
+    """작품 상세 (artist, exhibition, reactions 포함)"""
+    id: int
+    exhibition_id: int
+    artist_id: int
+    title: str
+    description: Optional[str] = None
+    year: Optional[int] = None
+    thumbnail_url: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    artist: Optional["ArtistResponse"] = None
+    exhibition: Optional["ExhibitionResponse"] = None
+    reactions: List["ReactionResponse"] = []
+
+    model_config = {"from_attributes": True}

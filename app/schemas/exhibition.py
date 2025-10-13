@@ -1,40 +1,63 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from pydantic import BaseModel
 from datetime import date, datetime
+from typing import List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.schemas.venue import VenueResponse
+    from app.schemas.artist import ArtistResponse
+    from app.schemas.artwork import ArtworkResponse
 
 
-class ExhibitionBase(BaseModel):
-    """Exhibition 기본 스키마"""
-    title: str = Field(..., max_length=255, description="전시 제목")
-    description: Optional[str] = Field(None, description="전시 설명")
-    location: Optional[str] = Field(None, max_length=255, description="전시 장소")
-    poster_url: Optional[str] = Field(None, max_length=500, description="전시 포스터 URL")
-    artist_names: Optional[List[str]] = Field(None, description="참여 작가 리스트")
-    start_date: date = Field(..., description="전시 시작일")
-    end_date: date = Field(..., description="전시 종료일")
-
-
-class ExhibitionCreate(ExhibitionBase):
-    """Exhibition 생성 요청 스키마"""
-    pass
+class ExhibitionCreate(BaseModel):
+    """전시 생성"""
+    title: str
+    description_text: Optional[str] = None
+    start_date: date
+    end_date: date
+    venue_id: int
+    artist_ids: List[int] = []
+    cover_image_url: Optional[str] = None
 
 
 class ExhibitionUpdate(BaseModel):
-    """Exhibition 수정 요청 스키마"""
-    title: Optional[str] = Field(None, max_length=255, description="전시 제목")
-    description: Optional[str] = Field(None, description="전시 설명")
-    location: Optional[str] = Field(None, max_length=255, description="전시 장소")
-    poster_url: Optional[str] = Field(None, max_length=500, description="전시 포스터 URL")
-    artist_names: Optional[List[str]] = Field(None, description="참여 작가 리스트")
-    start_date: Optional[date] = Field(None, description="전시 시작일")
-    end_date: Optional[date] = Field(None, description="전시 종료일")
+    """전시 수정"""
+    title: Optional[str] = None
+    description_text: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    venue_id: Optional[int] = None
+    artist_ids: Optional[List[int]] = None
+    cover_image_url: Optional[str] = None
 
 
-class ExhibitionResponse(ExhibitionBase):
-    """Exhibition 응답 스키마"""
+class ExhibitionResponse(BaseModel):
+    """전시 응답 (기본)"""
     id: int
+    title: str
+    description_text: Optional[str] = None
+    start_date: date
+    end_date: date
+    venue_id: int
+    cover_image_url: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
+
+
+class ExhibitionDetailResponse(BaseModel):
+    """전시 상세 (venue, artists, artworks 포함)"""
+    id: int
+    title: str
+    description_text: Optional[str] = None
+    start_date: date
+    end_date: date
+    venue_id: int
+    cover_image_url: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    venue: Optional["VenueResponse"] = None
+    artists: List["ArtistResponse"] = []
+    artworks: List["ArtworkResponse"] = []  # 선택
+
+    model_config = {"from_attributes": True}

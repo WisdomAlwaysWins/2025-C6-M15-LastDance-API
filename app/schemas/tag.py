@@ -1,19 +1,40 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.schemas.tag_category import TagCategoryResponse
 
 
-class TagBase(BaseModel):
-    """Tag 기본 스키마"""
-    name: str = Field(..., max_length=50, description="태그 이름")
+class TagCreate(BaseModel):
+    """태그 생성"""
+    category_id: int
+    name: str
+    display_order: int = 0
 
 
-class TagCreate(TagBase):
-    """Tag 생성 요청 스키마"""
-    pass
+class TagUpdate(BaseModel):
+    """태그 수정"""
+    category_id: Optional[int] = None
+    name: Optional[str] = None
+    display_order: Optional[int] = None
 
 
-class TagResponse(TagBase):
-    """Tag 응답 스키마"""
+class TagResponse(BaseModel):
+    """태그 응답 (기본)"""
     id: int
+    category_id: int
+    name: str
+    display_order: int
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
+
+
+class TagDetailResponse(BaseModel):
+    """태그 상세 (카테고리 포함)"""
+    id: int
+    category_id: int
+    name: str
+    display_order: int
+    category: Optional["TagCategoryResponse"] = None
+
+    model_config = {"from_attributes": True}
