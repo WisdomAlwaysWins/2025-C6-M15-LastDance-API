@@ -1,29 +1,28 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from sqlalchemy.sql import func
+import uuid as uuid_pkg
+
 from app.database import Base
 
 
 class Artist(Base):
     """
-    작가 모델 (User와 완전 분리)
+    작가 모델
     """
     __tablename__ = "artists"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False, index=True, comment="작가 이름")
-    bio = Column(Text, nullable=True, comment="작가 소개")
-    email = Column(String(255), nullable=True, comment="이메일")
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    uuid = Column(String, unique=True, nullable=False, index=True, default=lambda: str(uuid_pkg.uuid4()))  # 🆕 추가
+    name = Column(String, nullable=False, index=True)
+    bio = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    # 관계
+    # Relationships
     artworks = relationship("Artwork", back_populates="artist")
-    exhibitions = relationship(
-        "Exhibition",
-        secondary="exhibition_artists",
-        back_populates="artists"
-    )
+    exhibitions = relationship("Exhibition", secondary="exhibition_artists", back_populates="artists")
 
     def __repr__(self):
-        return f"<Artist(id={self.id}, name='{self.name}')>"
+        return f"<Artist(id={self.id}, uuid={self.uuid}, name={self.name})>"

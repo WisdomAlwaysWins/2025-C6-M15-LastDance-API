@@ -1,7 +1,7 @@
 """
 모든 스키마를 한 곳에서 임포트
 """
-from app.schemas.user import UserCreate, UserUpdate, UserResponse
+from app.schemas.visitor import VisitorCreate, VisitorUpdate, VisitorResponse
 from app.schemas.artist import ArtistCreate, ArtistUpdate, ArtistResponse
 from app.schemas.venue import VenueCreate, VenueUpdate, VenueResponse
 from app.schemas.exhibition import (
@@ -20,45 +20,25 @@ from app.schemas.reaction import (
     ReactionCreate, 
     ReactionUpdate, 
     ReactionResponse,
-    ReactionDetailResponse,
-    ReviewResponse  # 레거시 호환
+    ReactionDetailResponse
 )
 from app.schemas.visit_history import VisitHistoryCreate, VisitHistoryResponse
-from app.schemas.tag import TagCreate, TagResponse
+from app.schemas.tag_category import (  
+    TagCategoryCreate,
+    TagCategoryUpdate,
+    TagCategoryResponse,
+    TagCategoryDetailResponse
+)
+from app.schemas.tag import TagCreate, TagUpdate, TagResponse, TagDetailResponse
 
 __all__ = [
-    # User
-    "UserCreate",
-    "UserUpdate",
-    "UserResponse",
-    # Artist
-    "ArtistCreate",
-    "ArtistUpdate",
-    "ArtistResponse",
-    # Venue
-    "VenueCreate",
-    "VenueUpdate",
-    "VenueResponse",
-    # Exhibition
-    "ExhibitionCreate",
-    "ExhibitionUpdate",
-    "ExhibitionResponse",
-    "ExhibitionDetailResponse",
-    # Artwork
-    "ArtworkCreate",
-    "ArtworkUpdate",
-    "ArtworkResponse",
-    "ArtworkDetailResponse",
-    # Reaction (Review 대체)
-    "ReactionCreate",
-    "ReactionUpdate",
-    "ReactionResponse",
-    "ReactionDetailResponse",
-    "ReviewResponse",  # 레거시 호환
-    # VisitHistory
-    "VisitHistoryCreate",
-    "VisitHistoryResponse",
-    # Tag
-    "TagCreate",
-    "TagResponse",
+    "VisitorCreate", "VisitorUpdate", "VisitorResponse", 
+    "ArtistCreate", "ArtistUpdate", "ArtistResponse",
+    "VenueCreate", "VenueUpdate", "VenueResponse",
+    "ExhibitionCreate", "ExhibitionUpdate", "ExhibitionResponse", "ExhibitionDetailResponse",
+    "ArtworkCreate", "ArtworkUpdate", "ArtworkResponse", "ArtworkDetailResponse",
+    "ReactionCreate", "ReactionUpdate", "ReactionResponse", "ReactionDetailResponse",
+    "VisitHistoryCreate", "VisitHistoryResponse",
+    "TagCategoryCreate", "TagCategoryUpdate", "TagCategoryResponse", "TagCategoryDetailResponse",  
+    "TagCreate", "TagUpdate", "TagResponse", "TagDetailResponse",
 ]

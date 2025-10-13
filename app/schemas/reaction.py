@@ -1,61 +1,68 @@
-from pydantic import BaseModel, Field, validator
-from typing import Optional, List
+from pydantic import BaseModel, model_validator
 from datetime import datetime
+from typing import List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.schemas.tag import TagResponse
+    from app.schemas.visitor import VisitorResponse
+    from app.schemas.artwork import ArtworkResponse
+    from app.schemas.visit_history import VisitHistoryResponse
 
 
-class ReactionBase(BaseModel):
-    """Reaction 기본 스키마"""
-    artwork_id: int = Field(..., description="작품 ID")
-    user_id: int = Field(..., description="사용자 ID")
-    visit_id: Optional[int] = Field(None, description="방문 ID")
-    photo_url: Optional[str] = Field(None, max_length=500, description="사용자가 찍은 사진 URL")
-    comment: Optional[str] = Field(None, description="텍스트 코멘트")
+class ReactionCreate(BaseModel):
+    """리액션 생성"""
+    artwork_id: int
+    visitor_id: int
+    visit_id: Optional[int] = None
+    comment: Optional[str] = None
+    tag_ids: Optional[List[int]] = None
 
-
-class ReactionCreate(ReactionBase):
-    """Reaction 생성 요청 스키마"""
-    tag_ids: List[int] = Field(default=[], description="태그 ID 리스트")
-    
-    @validator('tag_ids', always=True)
-    def validate_reaction_content(cls, tag_ids, values):
-        """태그 또는 댓글 중 최소 1개 필수"""
-        comment = values.get('comment')
-        
-        if not comment and not tag_ids:
-            raise ValueError('태그 또는 댓글 중 최소 하나는 필수입니다')
-        
-        return tag_ids
+    @model_validator(mode='after')
+    def check_tags_or_comment(self):
+        """tag_ids 또는 comment 중 최소 하나 필수"""
+        if not self.tag_ids and not self.comment:
+            raise ValueError('Either tag_ids or comment must be provided')
+        return self
 
 
 class ReactionUpdate(BaseModel):
-    """Reaction 수정 요청 스키마"""
-    photo_url: Optional[str] = Field(None, max_length=500, description="사용자가 찍은 사진 URL")
-    comment: Optional[str] = Field(None, description="텍스트 코멘트")
-    tag_ids: Optional[List[int]] = Field(None, description="태그 ID 리스트")
+    """리액션 수정"""
+    comment: Optional[str] = None
+    tag_ids: Optional[List[int]] = None
+
+    @model_validator(mode='after')
+    def check_tags_or_comment(self):
+        """tag_ids 또는 comment 중 최소 하나 필수"""
+        if not self.tag_ids and not self.comment:
+            raise ValueError('Either tag_ids or comment must be provided')
+        return self
 
 
-class ReactionResponse(ReactionBase):
-    """Reaction 응답 스키마"""
+class ReactionResponse(BaseModel):
+    """리액션 응답 (기본)"""
     id: int
+    artwork_id: int
+    visitor_id: int
+    visit_id: Optional[int] = None
+    comment: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-
-
-# 중첩 객체 포함 버전 (선택적 사용)
-class ReactionDetailResponse(ReactionResponse):
-    """Reaction 상세 응답 (tags 포함)"""
-    from app.schemas.tag import TagResponse
-    
-    tags: List[TagResponse] = []
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
-# 레거시 호환용 (기존 ReviewResponse와 호환)
-class ReviewResponse(ReactionResponse):
-    """Review 응답 스키마 (레거시 호환용)"""
-    pass
+class ReactionDetailResponse(BaseModel):
+    """리액션 상세 (visitor, artwork, visit, tags 포함)"""
+    id: int
+    artwork_id: int
+    visitor_id: int
+    visit_id: Optional[int] = None
+    comment: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    visitor: Optional["VisitorResponse"] = None
+    artwork: Optional["ArtworkResponse"] = None
+    visit: Optional["VisitHistoryResponse"] = None
+    tags: List["TagResponse"] = []
+
+    model_config = {"from_attributes": True}

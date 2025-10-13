@@ -1,32 +1,31 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 
-class ArtistBase(BaseModel):
-    """Artist 기본 스키마"""
-    name: str = Field(..., max_length=100, description="작가 이름")
-    bio: Optional[str] = Field(None, description="작가 소개")
-    email: Optional[str] = Field(None, max_length=255, description="이메일")
-
-
-class ArtistCreate(ArtistBase):
-    """Artist 생성 요청 스키마"""
-    pass
+class ArtistCreate(BaseModel):
+    """작가 생성"""
+    uuid: Optional[str] = None
+    name: str  # 필수
+    bio: Optional[str] = None
+    email: Optional[str] = None
 
 
 class ArtistUpdate(BaseModel):
-    """Artist 수정 요청 스키마"""
-    name: Optional[str] = Field(None, max_length=100, description="작가 이름")
-    bio: Optional[str] = Field(None, description="작가 소개")
-    email: Optional[str] = Field(None, max_length=255, description="이메일")
+    """작가 수정"""
+    name: Optional[str] = None
+    bio: Optional[str] = None
+    email: Optional[str] = None
 
 
-class ArtistResponse(ArtistBase):
-    """Artist 응답 스키마"""
+class ArtistResponse(BaseModel):
+    """작가 응답"""
     id: int
+    uuid: str  # 🆕 추가
+    name: str
+    bio: Optional[str] = None
+    email: Optional[str] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
