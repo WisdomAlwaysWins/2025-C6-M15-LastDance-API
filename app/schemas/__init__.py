@@ -1,44 +1,108 @@
 """
-모든 스키마를 한 곳에서 임포트
+LastDance API Pydantic Schemas
+
+모든 API Request/Response 스키마 정의
 """
-from app.schemas.visitor import VisitorCreate, VisitorUpdate, VisitorResponse
-from app.schemas.artist import ArtistCreate, ArtistUpdate, ArtistResponse
-from app.schemas.venue import VenueCreate, VenueUpdate, VenueResponse
-from app.schemas.exhibition import (
-    ExhibitionCreate, 
-    ExhibitionUpdate, 
-    ExhibitionResponse,
-    ExhibitionDetailResponse
-)
-from app.schemas.artwork import (
-    ArtworkCreate, 
-    ArtworkUpdate, 
-    ArtworkResponse,
-    ArtworkDetailResponse
-)
-from app.schemas.reaction import (
-    ReactionCreate, 
-    ReactionUpdate, 
-    ReactionResponse,
-    ReactionDetailResponse
-)
-from app.schemas.visit_history import VisitHistoryCreate, VisitHistoryResponse
-from app.schemas.tag_category import (  
+
+from app.schemas.tag_category import (
     TagCategoryCreate,
     TagCategoryUpdate,
     TagCategoryResponse,
-    TagCategoryDetailResponse
+    TagCategoryDetail
 )
-from app.schemas.tag import TagCreate, TagUpdate, TagResponse, TagDetailResponse
+from app.schemas.tag import (
+    TagCreate,
+    TagUpdate,
+    TagResponse,
+    TagDetail
+)
+from app.schemas.venue import (
+    VenueCreate,
+    VenueUpdate,
+    VenueResponse
+)
+from app.schemas.artist import (
+    ArtistCreate,
+    ArtistUpdate,
+    ArtistResponse
+)
+from app.schemas.visitor import (
+    VisitorCreate,
+    VisitorUpdate,
+    VisitorResponse
+)
+from app.schemas.exhibition import (
+    ExhibitionCreate,
+    ExhibitionUpdate,
+    ExhibitionResponse,
+    ExhibitionDetail
+)
+from app.schemas.artwork import (
+    ArtworkCreate,
+    ArtworkUpdate,
+    ArtworkResponse,
+    ArtworkDetail
+)
+from app.schemas.visit_history import (
+    VisitHistoryCreate,
+    VisitHistoryResponse,
+    VisitHistoryDetail
+)
+from app.schemas.reaction import (
+    ReactionCreate,
+    ReactionUpdate,
+    ReactionResponse,
+    ReactionDetail
+)
+
+# Forward Reference 해결 (순환 참조 방지)
+TagCategoryDetail.model_rebuild()
+TagDetail.model_rebuild()
+ExhibitionDetail.model_rebuild()
+ArtworkDetail.model_rebuild()
+VisitHistoryDetail.model_rebuild()
+ReactionDetail.model_rebuild()
 
 __all__ = [
-    "VisitorCreate", "VisitorUpdate", "VisitorResponse", 
-    "ArtistCreate", "ArtistUpdate", "ArtistResponse",
-    "VenueCreate", "VenueUpdate", "VenueResponse",
-    "ExhibitionCreate", "ExhibitionUpdate", "ExhibitionResponse", "ExhibitionDetailResponse",
-    "ArtworkCreate", "ArtworkUpdate", "ArtworkResponse", "ArtworkDetailResponse",
-    "ReactionCreate", "ReactionUpdate", "ReactionResponse", "ReactionDetailResponse",
-    "VisitHistoryCreate", "VisitHistoryResponse",
-    "TagCategoryCreate", "TagCategoryUpdate", "TagCategoryResponse", "TagCategoryDetailResponse",  
-    "TagCreate", "TagUpdate", "TagResponse", "TagDetailResponse",
+    # TagCategory
+    "TagCategoryCreate",
+    "TagCategoryUpdate",
+    "TagCategoryResponse",
+    "TagCategoryDetail",
+    # Tag
+    "TagCreate",
+    "TagUpdate",
+    "TagResponse",
+    "TagDetail",
+    # Venue
+    "VenueCreate",
+    "VenueUpdate",
+    "VenueResponse",
+    # Artist
+    "ArtistCreate",
+    "ArtistUpdate",
+    "ArtistResponse",
+    # Visitor
+    "VisitorCreate",
+    "VisitorUpdate",
+    "VisitorResponse",
+    # Exhibition
+    "ExhibitionCreate",
+    "ExhibitionUpdate",
+    "ExhibitionResponse",
+    "ExhibitionDetail",
+    # Artwork
+    "ArtworkCreate",
+    "ArtworkUpdate",
+    "ArtworkResponse",
+    "ArtworkDetail",
+    # VisitHistory
+    "VisitHistoryCreate",
+    "VisitHistoryResponse",
+    "VisitHistoryDetail",
+    # Reaction
+    "ReactionCreate",
+    "ReactionUpdate",
+    "ReactionResponse",
+    "ReactionDetail",
 ]

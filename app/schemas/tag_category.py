@@ -1,52 +1,50 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import List, Optional, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.schemas.tag import TagResponse
 
-
 class TagCategoryCreate(BaseModel):
-    """태그 카테고리 생성"""
-    name: str
-    color_hex: str
-    display_order: int = 0
-
-    @field_validator('color_hex')
-    @classmethod
-    def validate_hex_color(cls, v: str) -> str:
-        """HEX 색상 코드 검증 (#RRGGBB)"""
-        if not v.startswith('#') or len(v) != 7:
-            raise ValueError('Must be valid hex color format (e.g., #FF5733)')
-        try:
-            int(v[1:], 16)
-        except ValueError:
-            raise ValueError('Invalid hex color format')
-        return v.upper()
+    """
+    태그 카테고리 생성 요청
+    
+    Attributes:
+        name: 카테고리명 (예: 감동이에요, 아름다워요)
+        color_hex: 색상 코드 (#RRGGBB 형식)
+        display_order: 표시 순서 (작을수록 먼저 표시)
+    """
+    name: str = Field(..., description="카테고리명")
+    color_hex: str = Field(..., pattern="^#[0-9A-Fa-f]{6}$", description="색상 코드")
+    display_order: int = Field(0, description="표시 순서")
 
 
 class TagCategoryUpdate(BaseModel):
-    """태그 카테고리 수정"""
+    """
+    태그 카테고리 수정 요청
+    
+    Attributes:
+        name: 카테고리명 (선택)
+        color_hex: 색상 코드 (선택)
+        display_order: 표시 순서 (선택)
+    """
     name: Optional[str] = None
-    color_hex: Optional[str] = None
+    color_hex: Optional[str] = Field(None, pattern="^#[0-9A-Fa-f]{6}$")
     display_order: Optional[int] = None
-
-    @field_validator('color_hex')
-    @classmethod
-    def validate_hex_color(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        if not v.startswith('#') or len(v) != 7:
-            raise ValueError('Must be valid hex color format (e.g., #FF5733)')
-        try:
-            int(v[1:], 16)
-        except ValueError:
-            raise ValueError('Invalid hex color format')
-        return v.upper()
 
 
 class TagCategoryResponse(BaseModel):
-    """태그 카테고리 응답 (기본)"""
+    """
+    태그 카테고리 기본 응답
+    
+    Attributes:
+        id: 카테고리 ID
+        name: 카테고리명
+        color_hex: 색상 코드
+        display_order: 표시 순서
+        created_at: 생성일시
+        updated_at: 수정일시
+    """
     id: int
     name: str
     color_hex: str
@@ -54,17 +52,18 @@ class TagCategoryResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True
 
 
-class TagCategoryDetailResponse(BaseModel):
-    """태그 카테고리 상세 (태그 포함)"""
-    id: int
-    name: str
-    color_hex: str
-    display_order: int
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    tags: List["TagResponse"] = []
+class TagCategoryDetail(TagCategoryResponse):
+    """
+    태그 카테고리 상세 응답 (태그 목록 포함)
+    
+    Attributes:
+        tags: 해당 카테고리의 태그 목록
+    """
+    tags: List['TagResponse'] = []  
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True
