@@ -13,8 +13,7 @@ class TagCategory(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False, index=True)
-    color_hex = Column(String, nullable=False)  # #RRGGBB 형식
-    display_order = Column(Integer, nullable=False, default=0)
+    color_hex = Column(String, nullable=True)  # #RRGGBB 형식
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

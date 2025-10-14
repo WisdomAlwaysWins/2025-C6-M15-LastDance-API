@@ -11,7 +11,6 @@ exhibition_artworks = Table(
     Base.metadata,
     Column('exhibition_id', Integer, ForeignKey('exhibitions.id'), primary_key=True),
     Column('artwork_id', Integer, ForeignKey('artworks.id'), primary_key=True),
-    Column('display_order', Integer, nullable=True),  # 전시 내 작품 순서
     Column('created_at', DateTime(timezone=True), server_default=func.now())
 )
 

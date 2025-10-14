@@ -23,7 +23,7 @@ from app.models import (
     reaction_tags,
     VisitHistory,
     Tag,
-    tag_category
+    TagCategory
 )
 
 # this is the Alembic Config object

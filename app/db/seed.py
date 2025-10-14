@@ -3,8 +3,10 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models import (
     TagCategory, Tag, Venue, Artist, 
-    Exhibition, Artwork, Visitor
+    Exhibition, Artwork, Visitor, exhibition_artworks
 )
+from app.models.visit_history import VisitHistory
+from app.models.reaction import Reaction, reaction_tags
 from datetime import date
 
 def seed_database():
@@ -17,10 +19,10 @@ def seed_database():
         # 1. TagCategory 생성
         print("🏷️  Creating TagCategories...")
         categories = [
-            TagCategory(name="감각", color_hex="#FF6B9D", display_order=1),
-            TagCategory(name="시간", color_hex="#4ECDC4", display_order=2),
-            TagCategory(name="공간", color_hex="#FFE66D", display_order=3),
-            TagCategory(name="질감", color_hex="#95E1D3", display_order=4)
+            TagCategory(name="감각", color_hex="#FF6B9D"),
+            TagCategory(name="시간", color_hex="#4ECDC4"),
+            TagCategory(name="공간", color_hex="#FFE66D"),
+            TagCategory(name="질감", color_hex="#95E1D3")
         ]
         db.add_all(categories)
         db.commit()
@@ -30,32 +32,32 @@ def seed_database():
         print("🎨 Creating Tags...")
         tags = [
             # 감각 (category_id=1)
-            Tag(name="몽환적인", category_id=1, display_order=1),
-            Tag(name="날카로운", category_id=1, display_order=2),
-            Tag(name="부드러운", category_id=1, display_order=3),
-            Tag(name="강렬한", category_id=1, display_order=4),
-            Tag(name="고요한", category_id=1, display_order=5),
+            Tag(name="몽환적인", category_id=1, color_hex="#FF6B9D"),
+            Tag(name="날카로운", category_id=1, color_hex="#FF6B9D"),
+            Tag(name="부드러운", category_id=1, color_hex="#FF6B9D"),
+            Tag(name="강렬한", category_id=1, color_hex="#FF6B9D"),
+            Tag(name="고요한", category_id=1, color_hex="#FF6B9D"),
             
             # 시간 (category_id=2)
-            Tag(name="영원한", category_id=2, display_order=1),
-            Tag(name="순간적인", category_id=2, display_order=2),
-            Tag(name="느린", category_id=2, display_order=3),
-            Tag(name="빠른", category_id=2, display_order=4),
-            Tag(name="정지된", category_id=2, display_order=5),
+            Tag(name="영원한", category_id=2, color_hex="#4ECDC4"),
+            Tag(name="순간적인", category_id=2, color_hex="#4ECDC4"),
+            Tag(name="느린", category_id=2, color_hex="#4ECDC4"),
+            Tag(name="빠른", category_id=2, color_hex="#4ECDC4"),
+            Tag(name="정지된", category_id=2, color_hex="#4ECDC4"),
             
             # 공간 (category_id=3)
-            Tag(name="넓은", category_id=3, display_order=1),
-            Tag(name="좁은", category_id=3, display_order=2),
-            Tag(name="깊은", category_id=3, display_order=3),
-            Tag(name="얕은", category_id=3, display_order=4),
-            Tag(name="무한한", category_id=3, display_order=5),
+            Tag(name="넓은", category_id=3, color_hex="#FFE66D"),
+            Tag(name="좁은", category_id=3, color_hex="#FFE66D"),
+            Tag(name="깊은", category_id=3, color_hex="#FFE66D"),
+            Tag(name="얕은", category_id=3, color_hex="#FFE66D"),
+            Tag(name="무한한", category_id=3, color_hex="#FFE66D"),
             
             # 질감 (category_id=4)
-            Tag(name="매끄러운", category_id=4, display_order=1),
-            Tag(name="거친", category_id=4, display_order=2),
-            Tag(name="투명한", category_id=4, display_order=3),
-            Tag(name="불투명한", category_id=4, display_order=4),
-            Tag(name="흐릿한", category_id=4, display_order=5)
+            Tag(name="매끄러운", category_id=4, color_hex="#95E1D3"),
+            Tag(name="거친", category_id=4, color_hex="#95E1D3"),
+            Tag(name="투명한", category_id=4, color_hex="#95E1D3"),
+            Tag(name="불투명한", category_id=4, color_hex="#95E1D3"),
+            Tag(name="흐릿한", category_id=4, color_hex="#95E1D3")
         ]
         db.add_all(tags)
         db.commit()
@@ -124,37 +126,31 @@ def seed_database():
         print("🖼️  Creating Exhibitions...")
         exhibitions = [
             Exhibition(
-                title="빛의 기억",
-                description="빛과 어둠이 만나는 지점에서 기억을 소환하다. 잊혀진 순간들이 빛을 통해 되살아나는 감각적 여정.",
-                start_date=date(2025, 1, 15),
-                end_date=date(2025, 4, 15),
+                title="테스트 전시1",
+                description_text="빛과 어둠이 만나는 지점에서 기억을 소환하다. 잊혀진 순간들이 빛을 통해 되살아나는 감각적 여정.",
+                start_date=date(2025, 9, 1),
+                end_date=date(2025, 11, 30),
                 venue_id=venues[0].id,
-                poster_image_url="https://picsum.photos/seed/light-memory/800/1200"
+                cover_image_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/exhibitions/47001042-2663-4ae8-8f5e-6ec9a5180a44.jpg"
             ),
             Exhibition(
-                title="시간의 파편",
-                description="흩어진 시간의 조각들을 모아 새로운 우주를 구축하다. 과거와 미래가 현재에서 만나는 시공간적 실험.",
-                start_date=date(2025, 2, 1),
-                end_date=date(2025, 5, 31),
+                title="테스트 전시2",
+                description_text="흩어진 시간의 조각들을 모아 새로운 우주를 구축하다. 과거와 미래가 현재에서 만나는 시공간적 실험.",
+                start_date=date(2025, 10, 1),
+                end_date=date(2025, 12, 31),
                 venue_id=venues[1].id,
-                poster_image_url="https://picsum.photos/seed/time-fragments/800/1200"
+                cover_image_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/exhibitions/615bfa98-298e-4803-9ba3-d3749e622618.jpg"
             ),
             Exhibition(
-                title="무의식의 정원",
-                description="잠든 마음 속 정원을 거닐다. 의식 너머 펼쳐진 내면의 풍경을 시각적으로 탐험하는 초현실적 전시.",
-                start_date=date(2025, 3, 10),
-                end_date=date(2025, 6, 30),
+                title="테스트 전시3",
+                description_text="잠든 마음 속 정원을 거닐다. 의식 너머 펼쳐진 내면의 풍경을 시각적으로 탐험하는 초현실적 전시.",
+                start_date=date(2025, 8, 15),
+                end_date=date(2025, 10, 31),
                 venue_id=venues[2].id,
-                poster_image_url="https://picsum.photos/seed/unconscious-garden/800/1200"
+                cover_image_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/exhibitions/3942a480-79e9-4924-be29-de928ce86464.jpg"
             )
         ]
         db.add_all(exhibitions)
-        db.commit()
-        
-        # Exhibition-Artist 관계 설정
-        exhibitions[0].artists.extend([artists[0], artists[1]])  # 나비야, 린 카이
-        exhibitions[1].artists.extend([artists[1], artists[2]])  # 린 카이, 제로 문
-        exhibitions[2].artists.extend([artists[2], artists[3], artists[4]])  # 제로 문, 소라 진, 아리스
         db.commit()
         print(f"   ✓ Created {len(exhibitions)} exhibitions")
         
@@ -164,94 +160,86 @@ def seed_database():
             # 빛의 기억 전시 작품들
             Artwork(
                 title="새벽의 속삭임",
-                exhibition_id=exhibitions[0].id,
                 artist_id=artists[0].id,
                 description="빛이 어둠을 깨우는 순간, 하루가 시작되기 전 고요한 대화",
                 year=2024,
-                image_url="https://picsum.photos/seed/dawn-whisper/1000/800"
+                thumbnail_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/artworks/fe86362a-2b35-4fbe-b164-5540456e8968.jpg"
             ),
             Artwork(
                 title="잊혀진 파장",
-                exhibition_id=exhibitions[0].id,
                 artist_id=artists[0].id,
                 description="기억 속에 남은 빛의 떨림, 시간이 남긴 흔적",
                 year=2024,
-                image_url="https://picsum.photos/seed/forgotten-wave/1000/800"
+                thumbnail_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/artworks/85126327-3c80-45c4-9f2d-f33605068b57.jpg"
             ),
             Artwork(
                 title="투명한 메아리",
-                exhibition_id=exhibitions[0].id,
                 artist_id=artists[1].id,
                 description="빛이 공간을 통과하며 남긴 소리 없는 울림",
                 year=2023,
-                image_url="https://picsum.photos/seed/transparent-echo/1000/800"
+                thumbnail_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/artworks/4407ec8e-6a88-4092-b618-c67d4d847fc6.jpg"
             ),
             
             # 시간의 파편 전시 작품들
             Artwork(
                 title="정지된 흐름",
-                exhibition_id=exhibitions[1].id,
                 artist_id=artists[1].id,
                 description="멈춘 듯 흐르는 시간, 역설의 시각화",
                 year=2024,
-                image_url="https://picsum.photos/seed/frozen-flow/1000/800"
+                thumbnail_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/artworks/f0218c11-a23d-4602-8397-1628b06d5dce.jpg"
             ),
             Artwork(
                 title="순간의 무게",
-                exhibition_id=exhibitions[1].id,
                 artist_id=artists[2].id,
                 description="찰나가 품은 영원함, 시간의 밀도를 느끼다",
                 year=2024,
-                image_url="https://picsum.photos/seed/moment-weight/1000/800"
+                thumbnail_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/artworks/622d47dd-4ebd-4d47-bfc3-833181bfa6e7.jpg"
             ),
             Artwork(
                 title="과거의 미래",
-                exhibition_id=exhibitions[1].id,
                 artist_id=artists[2].id,
                 description="지나간 시간이 예견한 다가올 세계",
                 year=2023,
-                image_url="https://picsum.photos/seed/past-future/1000/800"
+                thumbnail_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/artworks/c2d12ea5-d14b-449a-99b6-cb501356fac4.jpg"
             ),
-            
-            # 무의식의 정원 전시 작품들
-            Artwork(
-                title="꿈의 나무",
-                exhibition_id=exhibitions[2].id,
-                artist_id=artists[2].id,
-                description="잠든 마음에서 자라는 환상의 숲",
-                year=2024,
-                image_url="https://picsum.photos/seed/dream-tree/1000/800"
-            ),
-            Artwork(
-                title="침묵의 꽃",
-                exhibition_id=exhibitions[2].id,
-                artist_id=artists[3].id,
-                description="소리 없이 피어나는 내면의 아름다움",
-                year=2024,
-                image_url="https://picsum.photos/seed/silent-flower/1000/800"
-            ),
-            Artwork(
-                title="감정의 스펙트럼",
-                exhibition_id=exhibitions[2].id,
-                artist_id=artists[4].id,
-                description="보이지 않는 감정을 가시화한 색의 향연",
-                year=2024,
-                image_url="https://picsum.photos/seed/emotion-spectrum/1000/800"
-            ),
-            Artwork(
-                title="내면의 거울",
-                exhibition_id=exhibitions[2].id,
-                artist_id=artists[4].id,
-                description="마주하기 두려운 자신을 비추는 투명한 성찰",
-                year=2023,
-                image_url="https://picsum.photos/seed/inner-mirror/1000/800"
-            )
         ]
         db.add_all(artworks)
         db.commit()
         print(f"   ✓ Created {len(artworks)} artworks")
         
-        # 7. Visitor 생성
+        # 7. Exhibition-Artwork M:N 관계 설정
+        print("🔗 Linking Exhibitions and Artworks...")
+        # 빛의 기억: 작품 0, 1, 2
+        db.execute(
+            exhibition_artworks.insert().values([
+                {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[0].id},
+                {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[1].id},
+                {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[2].id}
+            ])
+        )
+        
+        # 시간의 파편: 작품 3, 4, 5
+        db.execute(
+            exhibition_artworks.insert().values([
+                {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[3].id},
+                {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[4].id},
+                {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[5].id}
+            ])
+        )
+        
+        # 무의식의 정원: 작품 연결 없음 (주석 처리)
+        # db.execute(
+        #     exhibition_artworks.insert().values([
+        #         {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[6].id},
+        #         {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[7].id},
+        #         {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[8].id},
+        #         {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[9].id}
+        #     ])
+        # )
+        db.commit()
+        print(f"   ✓ Linked artworks to exhibitions")
+        
+        # 8. Visitor 생성
         print("👥 Creating Visitors...")
         visitors = [
             Visitor(uuid="visitor-alpha-001", name="알파"),
@@ -264,6 +252,37 @@ def seed_database():
         db.commit()
         print(f"   ✓ Created {len(visitors)} visitors")
         
+        # 9. VisitHistory 생성 (알파가 전시1 관람)
+        print("📝 Creating Visit History...")
+        visit = VisitHistory(
+            visitor_id=visitors[0].id,  # 알파
+            exhibition_id=exhibitions[0].id  # 테스트 전시1
+        )
+        db.add(visit)
+        db.commit()
+        print(f"   ✓ Created visit history for 알파")
+        
+        # 10. Reaction 생성 (알파가 작품1에 반응)
+        print("💬 Creating Reaction...")
+        reaction = Reaction(
+            artwork_id=artworks[0].id,  # 새벽의 속삭임
+            visitor_id=visitors[0].id,  # 알파
+            visit_id=visit.id,
+            comment="빛과 어둠의 경계가 주는 고요함이 마음을 울렸어요. 새벽의 감성이 느껴지는 작품이네요."
+        )
+        db.add(reaction)
+        db.commit()
+        
+        # 반응에 태그 추가
+        db.execute(
+            reaction_tags.insert().values([
+                {"reaction_id": reaction.id, "tag_id": tags[0].id},  # 몽환적인
+                {"reaction_id": reaction.id, "tag_id": tags[4].id}   # 고요한
+            ])
+        )
+        db.commit()
+        print(f"   ✓ Created reaction with tags for 알파")
+        
         print("\n✅ Database seeding completed successfully!")
         print(f"""
 📊 Summary:
@@ -274,6 +293,8 @@ def seed_database():
    - {len(exhibitions)} Exhibitions
    - {len(artworks)} Artworks
    - {len(visitors)} Visitors
+   - 1 Visit History
+   - 1 Reaction with 2 Tags
         """)
         
     except Exception as e:

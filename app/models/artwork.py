@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
-
+from app.models.exhibition import exhibition_artworks
 
 class Artwork(Base):
     """
@@ -23,7 +23,7 @@ class Artwork(Base):
     artist = relationship("Artist", back_populates="artworks")
     exhibitions = relationship(
         "Exhibition",
-        secondary="exhibition_artwork",
+        secondary="exhibition_artworks",
         back_populates="artworks"
     )
     reactions = relationship("Reaction", back_populates="artwork", cascade="all, delete-orphan")

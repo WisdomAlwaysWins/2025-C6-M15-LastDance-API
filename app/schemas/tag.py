@@ -11,11 +11,11 @@ class TagCreate(BaseModel):
     Attributes:
         name: 태그명 (예: 마음이 깊게 울려요)
         category_id: 소속 카테고리 ID
-        display_order: 카테고리 내 표시 순서
+        color_hex: 색상 코드 (선택, #RRGGBB 형식)
     """
     name: str = Field(..., description="태그명")
     category_id: int = Field(..., description="카테고리 ID")
-    display_order: int = Field(0, description="표시 순서")
+    color_hex: Optional[str] = Field(None, pattern="^#[0-9A-Fa-f]{6}$", description="색상 코드")
 
 
 class TagUpdate(BaseModel):
@@ -25,11 +25,11 @@ class TagUpdate(BaseModel):
     Attributes:
         name: 태그명 (선택)
         category_id: 카테고리 ID (선택)
-        display_order: 표시 순서 (선택)
+        color_hex: 색상 코드 (선택)
     """
     name: Optional[str] = None
     category_id: Optional[int] = None
-    display_order: Optional[int] = None
+    color_hex: Optional[str] = Field(None, pattern="^#[0-9A-Fa-f]{6}$")
 
 
 class TagResponse(BaseModel):
@@ -40,12 +40,12 @@ class TagResponse(BaseModel):
         id: 태그 ID
         name: 태그명
         category_id: 소속 카테고리 ID
-        display_order: 표시 순서
+        color_hex: 색상 코드
     """
     id: int
     name: str
     category_id: int
-    display_order: int
+    color_hex: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -58,7 +58,7 @@ class TagDetail(TagResponse):
     Attributes:
         category: 소속 카테고리 정보
     """
-    category: 'TagCategoryResponse' 
+    category: 'TagCategoryResponse'
 
     class Config:
         from_attributes = True

@@ -42,6 +42,7 @@ async def root():
     API 루트 - 간단한 환영 메시지
     """
     return {
+        "message": "LastDance API",
         "docs": "/docs",
         "health": "/health"
     }
