@@ -17,7 +17,7 @@ from app.models import (
     Artist,
     Venue,
     Exhibition,
-    exhibition_artists,
+    exhibition_artworks,
     Artwork,
     Reaction,
     reaction_tags,
