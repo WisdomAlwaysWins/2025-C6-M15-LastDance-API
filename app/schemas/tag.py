@@ -1,40 +1,64 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.schemas.tag_category import TagCategoryResponse
 
-
 class TagCreate(BaseModel):
-    """태그 생성"""
-    category_id: int
-    name: str
-    display_order: int = 0
+    """
+    태그 생성 요청
+    
+    Attributes:
+        name: 태그명 (예: 마음이 깊게 울려요)
+        category_id: 소속 카테고리 ID
+        display_order: 카테고리 내 표시 순서
+    """
+    name: str = Field(..., description="태그명")
+    category_id: int = Field(..., description="카테고리 ID")
+    display_order: int = Field(0, description="표시 순서")
 
 
 class TagUpdate(BaseModel):
-    """태그 수정"""
-    category_id: Optional[int] = None
+    """
+    태그 수정 요청
+    
+    Attributes:
+        name: 태그명 (선택)
+        category_id: 카테고리 ID (선택)
+        display_order: 표시 순서 (선택)
+    """
     name: Optional[str] = None
+    category_id: Optional[int] = None
     display_order: Optional[int] = None
 
 
 class TagResponse(BaseModel):
-    """태그 응답 (기본)"""
+    """
+    태그 기본 응답
+    
+    Attributes:
+        id: 태그 ID
+        name: 태그명
+        category_id: 소속 카테고리 ID
+        display_order: 표시 순서
+    """
     id: int
-    category_id: int
     name: str
+    category_id: int
     display_order: int
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True
 
 
-class TagDetailResponse(BaseModel):
-    """태그 상세 (카테고리 포함)"""
-    id: int
-    category_id: int
-    name: str
-    display_order: int
-    category: Optional["TagCategoryResponse"] = None
+class TagDetail(TagResponse):
+    """
+    태그 상세 응답 (카테고리 정보 포함)
+    
+    Attributes:
+        category: 소속 카테고리 정보
+    """
+    category: 'TagCategoryResponse' 
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True

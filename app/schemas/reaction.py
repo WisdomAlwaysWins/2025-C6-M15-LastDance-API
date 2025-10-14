@@ -1,45 +1,77 @@
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, validator
 from datetime import datetime
-from typing import List, Optional, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.schemas.tag import TagResponse
-    from app.schemas.visitor import VisitorResponse
     from app.schemas.artwork import ArtworkResponse
-    from app.schemas.visit_history import VisitHistoryResponse
-
+    from app.schemas.visitor import VisitorResponse
+    from app.schemas.tag import TagResponse
 
 class ReactionCreate(BaseModel):
-    """리액션 생성"""
-    artwork_id: int
-    visitor_id: int
-    visit_id: Optional[int] = None
-    comment: Optional[str] = None
-    tag_ids: Optional[List[int]] = None
+    """
+    작품 반응 생성 요청
+    
+    Attributes:
+        artwork_id: 작품 ID
+        visitor_id: 관람객 ID
+        visit_id: 방문 기록 ID (선택)
+        comment: 코멘트 (선택)
+        tag_ids: 선택한 태그 ID 목록 (선택)
+    
+    Validation:
+        comment와 tag_ids 중 최소 하나는 필수
+    """
+    artwork_id: int = Field(..., description="작품 ID")
+    visitor_id: int = Field(..., description="관람객 ID")
+    visit_id: Optional[int] = Field(None, description="방문 기록 ID")
+    comment: Optional[str] = Field(None, description="코멘트")
+    tag_ids: Optional[List[int]] = Field(None, description="태그 ID 목록")
 
-    @model_validator(mode='after')
-    def check_tags_or_comment(self):
-        """tag_ids 또는 comment 중 최소 하나 필수"""
-        if not self.tag_ids and not self.comment:
-            raise ValueError('Either tag_ids or comment must be provided')
-        return self
+    @validator('tag_ids')
+    def validate_reaction_content(cls, tag_ids, values):
+        """comment 또는 tag_ids 중 하나는 필수"""
+        comment = values.get('comment')
+        if not comment and not tag_ids:
+            raise ValueError('comment 또는 tag_ids 중 하나는 필수입니다')
+        return tag_ids
 
 
 class ReactionUpdate(BaseModel):
-    """리액션 수정"""
+    """
+    작품 반응 수정 요청
+    
+    Attributes:
+        comment: 코멘트 (선택)
+        tag_ids: 태그 ID 목록 (선택)
+    
+    Validation:
+        수정 시에도 comment와 tag_ids 중 최소 하나는 필수
+    """
     comment: Optional[str] = None
     tag_ids: Optional[List[int]] = None
 
-    @model_validator(mode='after')
-    def check_tags_or_comment(self):
-        """tag_ids 또는 comment 중 최소 하나 필수"""
-        if not self.tag_ids and not self.comment:
-            raise ValueError('Either tag_ids or comment must be provided')
-        return self
+    @validator('tag_ids')
+    def validate_reaction_content(cls, tag_ids, values):
+        """comment 또는 tag_ids 중 하나는 필수"""
+        comment = values.get('comment')
+        if comment is None and not tag_ids:
+            raise ValueError('comment 또는 tag_ids 중 하나는 필수입니다')
+        return tag_ids
 
 
 class ReactionResponse(BaseModel):
-    """리액션 응답 (기본)"""
+    """
+    작품 반응 기본 응답
+    
+    Attributes:
+        id: 반응 ID
+        artwork_id: 작품 ID
+        visitor_id: 관람객 ID
+        visit_id: 방문 기록 ID
+        comment: 코멘트
+        created_at: 생성일시
+        updated_at: 수정일시
+    """
     id: int
     artwork_id: int
     visitor_id: int
@@ -48,21 +80,22 @@ class ReactionResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True
 
 
-class ReactionDetailResponse(BaseModel):
-    """리액션 상세 (visitor, artwork, visit, tags 포함)"""
-    id: int
-    artwork_id: int
-    visitor_id: int
-    visit_id: Optional[int] = None
-    comment: Optional[str] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    visitor: Optional["VisitorResponse"] = None
-    artwork: Optional["ArtworkResponse"] = None
-    visit: Optional["VisitHistoryResponse"] = None
-    tags: List["TagResponse"] = []
+class ReactionDetail(ReactionResponse):
+    """
+    작품 반응 상세 응답 (작품, 관람객, 태그 정보 포함)
+    
+    Attributes:
+        artwork: 작품 정보
+        visitor: 관람객 정보
+        tags: 선택한 태그 목록
+    """
+    artwork: 'ArtworkResponse'  
+    visitor: 'VisitorResponse'  
+    tags: List['TagResponse'] = []  
 
-    model_config = {"from_attributes": True}
+    class Config:
+        from_attributes = True

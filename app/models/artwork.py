@@ -11,18 +11,21 @@ class Artwork(Base):
     __tablename__ = "artworks"
 
     id = Column(Integer, primary_key=True, index=True)
-    exhibition_id = Column(Integer, ForeignKey("exhibitions.id"), nullable=False)
-    artist_id = Column(Integer, ForeignKey("artists.id"), nullable=False)  # 🆕 추가
+    artist_id = Column(Integer, ForeignKey("artists.id"), nullable=False) 
     title = Column(String, nullable=False)
-    description = Column(String, nullable=True)  # 🆕 추가
-    year = Column(Integer, nullable=True)  # 🆕 추가
+    description = Column(String, nullable=True)  
+    year = Column(Integer, nullable=True)  
     thumbnail_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    exhibition = relationship("Exhibition", back_populates="artworks")
-    artist = relationship("Artist", back_populates="artworks")  # 🆕 추가
+    artist = relationship("Artist", back_populates="artworks")
+    exhibitions = relationship(
+        "Exhibition",
+        secondary="exhibition_artwork",
+        back_populates="artworks"
+    )
     reactions = relationship("Reaction", back_populates="artwork", cascade="all, delete-orphan")
 
     def __repr__(self):

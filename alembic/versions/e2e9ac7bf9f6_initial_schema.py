@@ -1,8 +1,8 @@
 """Initial schema
 
-Revision ID: 6aba33994215
+Revision ID: e2e9ac7bf9f6
 Revises: 
-Create Date: 2025-10-13 16:24:10.169732
+Create Date: 2025-10-14 12:32:20.230098
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '6aba33994215'
+revision: str = 'e2e9ac7bf9f6'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -65,6 +65,19 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_visitors_id'), 'visitors', ['id'], unique=False)
     op.create_index(op.f('ix_visitors_uuid'), 'visitors', ['uuid'], unique=True)
+    op.create_table('artworks',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('artist_id', sa.Integer(), nullable=False),
+    sa.Column('title', sa.String(), nullable=False),
+    sa.Column('description', sa.String(), nullable=True),
+    sa.Column('year', sa.Integer(), nullable=True),
+    sa.Column('thumbnail_url', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['artist_id'], ['artists.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_artworks_id'), 'artworks', ['id'], unique=False)
     op.create_table('exhibitions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('title', sa.String(), nullable=False),
@@ -89,28 +102,14 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_tags_id'), 'tags', ['id'], unique=False)
     op.create_index(op.f('ix_tags_name'), 'tags', ['name'], unique=True)
-    op.create_table('artworks',
-    sa.Column('id', sa.Integer(), nullable=False),
+    op.create_table('exhibition_artworks',
     sa.Column('exhibition_id', sa.Integer(), nullable=False),
-    sa.Column('artist_id', sa.Integer(), nullable=False),
-    sa.Column('title', sa.String(), nullable=False),
-    sa.Column('description', sa.String(), nullable=True),
-    sa.Column('year', sa.Integer(), nullable=True),
-    sa.Column('thumbnail_url', sa.String(), nullable=True),
+    sa.Column('artwork_id', sa.Integer(), nullable=False),
+    sa.Column('display_order', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['artist_id'], ['artists.id'], ),
+    sa.ForeignKeyConstraint(['artwork_id'], ['artworks.id'], ),
     sa.ForeignKeyConstraint(['exhibition_id'], ['exhibitions.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_artworks_id'), 'artworks', ['id'], unique=False)
-    op.create_table('exhibition_artists',
-    sa.Column('exhibition_id', sa.Integer(), nullable=False),
-    sa.Column('artist_id', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
-    sa.ForeignKeyConstraint(['artist_id'], ['artists.id'], ),
-    sa.ForeignKeyConstraint(['exhibition_id'], ['exhibitions.id'], ),
-    sa.PrimaryKeyConstraint('exhibition_id', 'artist_id')
+    sa.PrimaryKeyConstraint('exhibition_id', 'artwork_id')
     )
     op.create_table('visit_histories',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -153,14 +152,14 @@ def downgrade() -> None:
     op.drop_table('reactions')
     op.drop_index(op.f('ix_visit_histories_id'), table_name='visit_histories')
     op.drop_table('visit_histories')
-    op.drop_table('exhibition_artists')
-    op.drop_index(op.f('ix_artworks_id'), table_name='artworks')
-    op.drop_table('artworks')
+    op.drop_table('exhibition_artworks')
     op.drop_index(op.f('ix_tags_name'), table_name='tags')
     op.drop_index(op.f('ix_tags_id'), table_name='tags')
     op.drop_table('tags')
     op.drop_index(op.f('ix_exhibitions_id'), table_name='exhibitions')
     op.drop_table('exhibitions')
+    op.drop_index(op.f('ix_artworks_id'), table_name='artworks')
+    op.drop_table('artworks')
     op.drop_index(op.f('ix_visitors_uuid'), table_name='visitors')
     op.drop_index(op.f('ix_visitors_id'), table_name='visitors')
     op.drop_table('visitors')

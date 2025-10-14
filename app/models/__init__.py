@@ -1,7 +1,7 @@
 from app.models.visitor import Visitor
 from app.models.artist import Artist
 from app.models.venue import Venue
-from app.models.exhibition import Exhibition, exhibition_artists
+from app.models.exhibition import Exhibition, exhibition_artworks
 from app.models.artwork import Artwork
 from app.models.reaction import Reaction, reaction_tags
 from app.models.visit_history import VisitHistory
@@ -13,7 +13,7 @@ __all__ = [
     "Artist",
     "Venue",
     "Exhibition",
-    "exhibition_artists",
+    "exhibition_artworks",
     "Artwork",
     "Reaction",
     "reaction_tags",

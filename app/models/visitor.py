@@ -7,7 +7,7 @@ from app.database import Base
 
 class Visitor(Base):
     """
-    관람객 모델 (기존 User에서 변경)
+    관람객 모델
     """
     __tablename__ = "visitors"
 
