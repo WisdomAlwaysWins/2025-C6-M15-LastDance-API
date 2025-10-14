@@ -1,14 +1,16 @@
+# app/api/v1/api.py (또는 app/main.py)
 from fastapi import APIRouter
-# from app.api.v1.endpoints import admin, reactions, exhibitions, artworks, visitor, visits, artists, venues
+from app.api.v1.endpoints import artists, artworks, exhibitions, reactions, tag_categories, tags, venues, visit_histories, visitors, upload
 
 api_router = APIRouter()
 
-# 라우터 등록
-# api_router.include_router(admin.router, prefix="/admin", tags=["Admin"])
-# api_router.include_router(visitor.router, prefix="/users", tags=["Users"])
-# api_router.include_router(exhibitions.router, prefix="/exhibitions", tags=["Exhibitions"])
-# api_router.include_router(artworks.router, prefix="/artworks", tags=["Artworks"])
-# api_router.include_router(reactions.router, prefix="/reactions", tags=["Reactions"])
-# api_router.include_router(visits.router, prefix="/visits", tags=["Visits"])
-# api_router.include_router(venues.router, prefix="/venues", tags=["Venues"])
-# api_router.include_router(artists.router, prefix="/artists", tags=["Artists"])
+api_router.include_router(artists.router)
+api_router.include_router(artworks.router)
+api_router.include_router(exhibitions.router)
+api_router.include_router(reactions.router)
+api_router.include_router(tag_categories.router)
+api_router.include_router(tags.router)
+api_router.include_router(venues.router)
+api_router.include_router(visit_histories.router)
+api_router.include_router(visitors.router)
+api_router.include_router(upload.router)
