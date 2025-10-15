@@ -215,27 +215,27 @@ def update_reaction(
     return reaction
 
 
-@router.delete("/{reaction_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_reaction(
+@router.delete("/{reaction_id}", status_code=204)
+async def delete_reaction(
     reaction_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    반응 삭제
-    
-    Args:
-        reaction_id: 반응 ID
-        
-    Raises:
-        404: 반응을 찾을 수 없음
+    반응 삭제 (촬영한 이미지도 함께 삭제)
     """
     reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
     if not reaction:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Reaction with id {reaction_id} not found"
-        )
+        raise HTTPException(status_code=404, detail="반응을 찾을 수 없습니다")
     
+    # S3에서 이미지 삭제 (있는 경우)
+    if reaction.image_url:
+        try:
+            s3_client.delete_file(reaction.image_url)
+        except Exception as e:
+            logger.warning(f"⚠️ S3 이미지 삭제 실패 (계속 진행): {e}")
+    
+    # DB에서 반응 삭제
     db.delete(reaction)
     db.commit()
-    return None
+    
+    return Response(status_code=204)

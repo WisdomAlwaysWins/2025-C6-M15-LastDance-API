@@ -24,6 +24,7 @@ class Reaction(Base):
     artwork_id = Column(Integer, ForeignKey("artworks.id"), nullable=False)
     visitor_id = Column(Integer, ForeignKey("visitors.id"), nullable=False)
     visit_id = Column(Integer, ForeignKey("visit_histories.id"), nullable=True)
+    image_url = Column(String, nullable=True)
     comment = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
