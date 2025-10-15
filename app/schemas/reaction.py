@@ -16,6 +16,7 @@ class ReactionCreate(BaseModel):
         visitor_id: 관람객 ID
         visit_id: 방문 기록 ID (선택)
         comment: 코멘트 (선택)
+        image_url: 촬영한 작품 사진 URL (선택)
         tag_ids: 선택한 태그 ID 목록 (선택)
     
     Validation:
@@ -25,6 +26,7 @@ class ReactionCreate(BaseModel):
     visitor_id: int = Field(..., description="관람객 ID")
     visit_id: Optional[int] = Field(None, description="방문 기록 ID")
     comment: Optional[str] = Field(None, description="코멘트")
+    image_url: Optional[str] = Field(None, description="촬영한 작품 사진 URL")
     tag_ids: Optional[List[int]] = Field(None, description="태그 ID 목록")
 
     @validator('tag_ids')
@@ -42,12 +44,14 @@ class ReactionUpdate(BaseModel):
     
     Attributes:
         comment: 코멘트 (선택)
+        image_url: 촬영한 작품 사진 URL (선택)
         tag_ids: 태그 ID 목록 (선택)
     
     Validation:
         수정 시에도 comment와 tag_ids 중 최소 하나는 필수
     """
     comment: Optional[str] = None
+    image_url: Optional[str] = None
     tag_ids: Optional[List[int]] = None
 
     @validator('tag_ids')
@@ -69,6 +73,7 @@ class ReactionResponse(BaseModel):
         visitor_id: 관람객 ID
         visit_id: 방문 기록 ID
         comment: 코멘트
+        image_url: 촬영한 작품 사진 URL
         created_at: 생성일시
         updated_at: 수정일시
     """
@@ -77,6 +82,7 @@ class ReactionResponse(BaseModel):
     visitor_id: int
     visit_id: Optional[int] = None
     comment: Optional[str] = None
+    image_url: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
