@@ -1,8 +1,10 @@
 # app/api/v1/endpoints/artworks.py
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import logging
 
+from app.utils.lambda_client import lambda_client
 from app.database import get_db
 from app.models.artwork import Artwork
 from app.models.artist import Artist
@@ -11,8 +13,12 @@ from app.schemas.artwork import (
     ArtworkCreate,
     ArtworkUpdate,
     ArtworkResponse,
-    ArtworkDetail
+    ArtworkDetail,
+    ArtworkMatchRequest, 
+    ArtworkMatchResponse
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/artworks", tags=["Artworks"])
 
@@ -167,3 +173,68 @@ def delete_artwork(
     db.delete(artwork)
     db.commit()
     return None
+
+
+@router.post("/match", response_model=ArtworkMatchResponse, summary="작품 이미지 매칭")
+async def match_artwork(
+    request: ArtworkMatchRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    업로드된 이미지와 유사한 작품을 찾는다.
+    
+    - **image_base64**: Base64 인코딩된 이미지
+    - **exhibition_id**: 전시 ID
+    - **threshold**: 유사도 임계값 (0.0 ~ 1.0)
+    """
+    try:
+        # 1. 전시 조회
+        exhibition = db.query(Exhibition).filter(
+            Exhibition.id == request.exhibition_id
+        ).first()
+        
+        if not exhibition:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"전시 ID {request.exhibition_id}를 찾을 수 없습니다"
+            )
+        
+        # 2. 해당 전시의 작품들 조회 (relationship을 통해)
+        artworks = exhibition.artworks
+        
+        if not artworks:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"전시 ID {request.exhibition_id}에 작품이 없습니다"
+            )
+        
+        # 3. Lambda에 전달할 작품 정보 구성
+        artwork_list = [
+            {
+                "id": artwork.id,
+                "title": artwork.title,
+                "artist_id": artwork.artist_id,
+                "thumbnail_url": artwork.thumbnail_url
+            }
+            for artwork in artworks
+        ]
+        
+        logger.info(f"전시 {request.exhibition_id}의 작품 {len(artwork_list)}개와 매칭")
+        
+        # 4. Lambda 호출
+        result = lambda_client.invoke_image_matching(
+            image_base64=request.image_base64,
+            artworks=artwork_list,
+            threshold=request.threshold
+        )
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"이미지 매칭 오류: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"이미지 매칭 중 오류가 발생했습니다: {str(e)}"
+        )

@@ -6,6 +6,7 @@ uvicorn[standard]==0.27.0
 sqlalchemy==2.0.25
 psycopg2-binary==2.9.9
 alembic==1.13.1
+pgvector>=0.2.0
 
 # Pydantic
 pydantic==2.5.3
@@ -21,13 +22,5 @@ boto3==1.34.34
 
 # Image Processing
 pillow==10.2.0
-
-# CLIP 모델
-torch==2.5.1
-torchvision==0.20.1
-transformers==4.46.0
-git+https://github.com/openai/CLIP.git
-
-# 벡터 연산
 numpy==1.26.4
-scikit-learn==1.5.2
+requests>=2.31.0

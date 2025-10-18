@@ -19,7 +19,13 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: str
     AWS_SECRET_ACCESS_KEY: str
     AWS_REGION: str = "ap-northeast-2"
+    AWS_LAMBDA_REGION: str 
     S3_BUCKET_NAME: str
+    
+    HUGGINGFACE_TOKEN: str
+
+    # Lambda
+    LAMBDA_FUNCTION_NAME: str = "lastdance-embedding-generator"
     
     class Config:
         env_file = ".env"
