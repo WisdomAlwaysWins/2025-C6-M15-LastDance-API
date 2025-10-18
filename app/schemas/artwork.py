@@ -82,3 +82,36 @@ class ArtworkDetail(ArtworkResponse):
 
     class Config:
         from_attributes = True
+
+
+class ArtworkMatchRequest(BaseModel):
+    """작품 매칭 요청"""
+    image_base64: str = Field(..., description="Base64 인코딩된 이미지")
+    exhibition_id: int = Field(..., description="전시 ID")
+    threshold: float = Field(0.7, ge=0.0, le=1.0, description="유사도 임계값")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "image_base64": "iVBORw0KGgoAAAANS...",
+                "exhibition_id": 1,
+                "threshold": 0.7
+            }
+        }
+
+
+class ArtworkMatchResult(BaseModel):
+    """작품 매칭 결과"""
+    artwork_id: int
+    title: str
+    artist_id: int
+    thumbnail_url: Optional[str]
+    similarity: float
+
+
+class ArtworkMatchResponse(BaseModel):
+    """작품 매칭 응답"""
+    matched: bool
+    total_matches: int
+    threshold: float
+    results: List[ArtworkMatchResult]
