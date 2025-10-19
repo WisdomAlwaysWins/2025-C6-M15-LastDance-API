@@ -1,6 +1,7 @@
 # app/utils/embedding.py
 """HuggingFace API 임베딩 서비스 (DINOv2 + 재시도 로직)"""
 import io
+import logging
 import time
 from typing import Union
 
@@ -9,6 +10,8 @@ import numpy as np
 import requests
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class HuggingFaceEmbeddingService:
@@ -21,7 +24,7 @@ class HuggingFaceEmbeddingService:
         self.model_name = model_name
         self.api_url = f"https://api-inference.huggingface.co/models/{model_name}"
         self.headers = {"Authorization": f"Bearer {settings.HUGGINGFACE_TOKEN}"}
-        print(f"🤗 HuggingFace API 초기화: {model_name}")
+        logger.info(f"HuggingFace API 초기화: {model_name}")
 
     def get_embedding(
         self, image: Union[Image.Image, bytes, str], max_retries: int = 5
@@ -56,8 +59,8 @@ class HuggingFaceEmbeddingService:
         # API 호출 (재시도 포함)
         for attempt in range(max_retries):
             try:
-                print(
-                    f"📤 HuggingFace API 호출 중... (시도 {attempt + 1}/{max_retries})"
+                logger.info(
+                    f"HuggingFace API 호출 중 (시도 {attempt + 1}/{max_retries})"
                 )
 
                 response = requests.post(
@@ -73,7 +76,7 @@ class HuggingFaceEmbeddingService:
                     error_msg = response.json().get("error", "")
                     if "loading" in error_msg.lower():
                         wait_time = 20
-                        print(f"⏳ 모델 로딩 중... {wait_time}초 대기")
+                        logger.warning(f"모델 로딩 중, {wait_time}초 대기")
                         time.sleep(wait_time)
                         continue
 
@@ -81,7 +84,7 @@ class HuggingFaceEmbeddingService:
 
                 # 응답 파싱
                 result = response.json()
-                print(f"✅ API 응답 받음: {type(result)}")
+                logger.info(f"API 응답 수신: {type(result)}")
 
                 # DINOv2 응답 형식 처리
                 if isinstance(result, list):
@@ -101,12 +104,12 @@ class HuggingFaceEmbeddingService:
                 else:
                     embedding = np.array(result)
 
-                print(f"✅ 임베딩 생성 완료! Shape: {embedding.shape}")
+                logger.info(f"임베딩 생성 완료, shape: {embedding.shape}")
                 return embedding.squeeze()
 
             except requests.exceptions.HTTPError as e:
-                print(f"❌ HTTP 에러: {e}")
-                print(f"   Response: {e.response.text[:500]}")
+                logger.error(f"HTTP 에러: {e}")
+                logger.info(f"응답: {e.response.text[:500]}")
 
                 if e.response.status_code == 404:
                     raise RuntimeError(
@@ -120,7 +123,7 @@ class HuggingFaceEmbeddingService:
                 time.sleep(5)
 
             except Exception as e:
-                print(f"❌ 에러 발생: {e}")
+                logger.error(f"에러 발생: {e}")
                 if attempt == max_retries - 1:
                     raise
                 time.sleep(5)

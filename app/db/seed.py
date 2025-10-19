@@ -1,5 +1,6 @@
 # app/db/seed.py
 from datetime import date
+import logging
 
 from app.db.session import SessionLocal
 from app.models import (
@@ -15,16 +16,18 @@ from app.models import (
 from app.models.reaction import Reaction, reaction_tags
 from app.models.visit_history import VisitHistory
 
+logger = logging.getLogger(__name__)
+
 
 def seed_database():
     """가상의 전시 데이터로 데이터베이스 시딩"""
     db = SessionLocal()
 
     try:
-        print("🌱 Starting database seeding...")
+        logger.info("데이터베이스 시딩 시작...")
 
         # 1. TagCategory 생성
-        print("🏷️  Creating TagCategories...")
+        logger.info("태그 카테고리 생성 중...")
         categories = [
             TagCategory(name="감각", color_hex="#FF6B9D"),
             TagCategory(name="시간", color_hex="#4ECDC4"),
@@ -33,10 +36,10 @@ def seed_database():
         ]
         db.add_all(categories)
         db.commit()
-        print(f"   ✓ Created {len(categories)} categories")
+        logger.info(f"{len(categories)}개 카테고리 생성 완료")
 
         # 2. Tag 생성
-        print("🎨 Creating Tags...")
+        logger.info("태그 생성 중...")
         tags = [
             # 감각 (category_id=1)
             Tag(name="몽환적인", category_id=1, color_hex="#FF6B9D"),
@@ -65,10 +68,10 @@ def seed_database():
         ]
         db.add_all(tags)
         db.commit()
-        print(f"   ✓ Created {len(tags)} tags")
+        logger.info(f"{len(tags)}개 태그 생성 완료")
 
         # 3. Venue 생성
-        print("🏛️  Creating Venues...")
+        logger.info("전시 장소 생성 중...")
         venues = [
             Venue(
                 name="루미나 갤러리",
@@ -91,10 +94,10 @@ def seed_database():
         ]
         db.add_all(venues)
         db.commit()
-        print(f"   ✓ Created {len(venues)} venues")
+        logger.info(f"{len(venues)}개 장소 생성 완료")
 
         # 4. Artist 생성
-        print("🎭 Creating Artists...")
+        logger.info("작가 생성 중...")
         artists = [
             Artist(
                 name="나비야",
@@ -124,10 +127,10 @@ def seed_database():
         ]
         db.add_all(artists)
         db.commit()
-        print(f"   ✓ Created {len(artists)} artists")
+        logger.info(f"{len(artists)}개 작가 생성 완료")
 
         # 5. Exhibition 생성
-        print("🖼️  Creating Exhibitions...")
+        logger.info("전시 생성 중...")
         exhibitions = [
             Exhibition(
                 title="테스트 전시1",
@@ -156,10 +159,10 @@ def seed_database():
         ]
         db.add_all(exhibitions)
         db.commit()
-        print(f"   ✓ Created {len(exhibitions)} exhibitions")
+        logger.info(f"{len(exhibitions)}개 전시 생성 완료")
 
         # 6. Artwork 생성
-        print("🎨 Creating Artworks...")
+        logger.info("작품 생성 중...")
         artworks = [
             # 빛의 기억 전시 작품들
             Artwork(
@@ -208,10 +211,10 @@ def seed_database():
         ]
         db.add_all(artworks)
         db.commit()
-        print(f"   ✓ Created {len(artworks)} artworks")
+        logger.info(f"{len(artworks)}개 작품 생성 완료")
 
         # 7. Exhibition-Artwork M:N 관계 설정
-        print("🔗 Linking Exhibitions and Artworks...")
+        logger.info("전시-작품 연결 중...")
         # 빛의 기억: 작품 0, 1, 2
         db.execute(
             exhibition_artworks.insert().values(
@@ -244,10 +247,10 @@ def seed_database():
         #     ])
         # )
         db.commit()
-        print(f"✓ Linked artworks to exhibitions")
+        logger.info("작품 연결 완료")
 
         # 8. Visitor 생성
-        print("👥 Creating Visitors...")
+        logger.info("관람객 생성 중...")
         visitors = [
             Visitor(uuid="visitor-alpha-001", name="알파"),
             Visitor(uuid="visitor-beta-002", name="베타"),
@@ -257,20 +260,20 @@ def seed_database():
         ]
         db.add_all(visitors)
         db.commit()
-        print(f"✓ Created {len(visitors)} visitors")
+        logger.info(f"{len(visitors)}명 관람객 생성 완료")
 
         # 9. VisitHistory 생성 (알파가 전시1 관람)
-        print("📝 Creating Visit History...")
+        logger.info("방문 기록 생성 중...")
         visit = VisitHistory(
             visitor_id=visitors[0].id,  # 알파
             exhibition_id=exhibitions[0].id,  # 테스트 전시1
         )
         db.add(visit)
         db.commit()
-        print(f"✓ Created visit history for 알파")
+        logger.info("알파 방문 기록 생성 완료")
 
         # 10. Reaction 생성 (알파가 작품1에 반응)
-        print("💬 Creating Reaction...")
+        logger.info("반응 생성 중...")
         reaction = Reaction(
             artwork_id=artworks[0].id,  # 새벽의 속삭임
             visitor_id=visitors[0].id,  # 알파
@@ -290,26 +293,26 @@ def seed_database():
             )
         )
         db.commit()
-        print(f"   ✓ Created reaction with tags for 알파")
+        logger.info("알파 태그 포함 반응 생성 완료")
 
-        print("\n✅ Database seeding completed successfully!")
-        print(
+        logger.info("\n데이터베이스 시딩 완료!")
+        logger.info(
             f"""
-📊 Summary:
-   - {len(categories)} Tag Categories
-   - {len(tags)} Tags
-   - {len(venues)} Venues
-   - {len(artists)} Artists
-   - {len(exhibitions)} Exhibitions
-   - {len(artworks)} Artworks
-   - {len(visitors)} Visitors
-   - 1 Visit History
-   - 1 Reaction with 2 Tags
+        요약:
+        - {len(categories)}개 태그 카테고리
+        - {len(tags)}개 태그
+        - {len(venues)}개 장소
+        - {len(artists)}명 작가
+        - {len(exhibitions)}개 전시
+        - {len(artworks)}개 작품
+        - {len(visitors)}명 관람객
+        - 1개 방문 기록
+        - 2개 태그 포함 1개 반응
         """
         )
 
     except Exception as e:
-        print(f"\n❌ Error during seeding: {e}")
+        logger.error(f"\n시딩 중 에러 발생: {e}")
         db.rollback()
         raise
     finally:
