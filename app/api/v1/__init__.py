@@ -1,6 +1,17 @@
 # app/api/v1/api.py (또는 app/main.py)
+from app.api.v1.endpoints import (
+    artists,
+    artworks,
+    exhibitions,
+    reactions,
+    tag_categories,
+    tags,
+    upload,
+    venues,
+    visit_histories,
+    visitors,
+)
 from fastapi import APIRouter
-from app.api.v1.endpoints import artists, artworks, exhibitions, reactions, tag_categories, tags, venues, visit_histories, visitors, upload
 
 api_router = APIRouter()
 

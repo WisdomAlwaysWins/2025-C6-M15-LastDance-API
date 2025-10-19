@@ -1,16 +1,15 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Table
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
 
-
 # M:N 중간 테이블
 reaction_tags = Table(
-    'reaction_tags',
+    "reaction_tags",
     Base.metadata,
-    Column('reaction_id', Integer, ForeignKey('reactions.id'), primary_key=True),
-    Column('tag_id', Integer, ForeignKey('tags.id'), primary_key=True)
+    Column("reaction_id", Integer, ForeignKey("reactions.id"), primary_key=True),
+    Column("tag_id", Integer, ForeignKey("tags.id"), primary_key=True),
 )
 
 
@@ -18,6 +17,7 @@ class Reaction(Base):
     """
     작품에 대한 반응/평가 모델 (기존 Review에서 변경)
     """
+
     __tablename__ = "reactions"
 
     id = Column(Integer, primary_key=True, index=True)
