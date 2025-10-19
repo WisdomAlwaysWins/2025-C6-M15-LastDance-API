@@ -15,4 +15,4 @@ api_router.include_router(visit_histories.router)
 api_router.include_router(visitors.router)
 api_router.include_router(upload.router)
 
-api_router.include_router(admin.router)
+# api_router.include_router(admin.router)
