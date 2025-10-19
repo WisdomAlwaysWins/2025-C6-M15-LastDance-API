@@ -63,7 +63,7 @@ class S3Client:
                 s3_key = f"{folder}/{filename}"
             
             # S3 업로드
-            self.s3.put_object(
+            self.s3_client.put_object(
                 Bucket=settings.S3_BUCKET_NAME,
                 Key=s3_key,
                 Body=contents,
