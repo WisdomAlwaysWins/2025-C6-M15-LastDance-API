@@ -1,4 +1,4 @@
-# app/services/embedding.py
+# app/utils/embedding.py
 """HuggingFace API 임베딩 서비스 (DINOv2 + 재시도 로직)"""
 import requests
 import numpy as np
