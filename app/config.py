@@ -29,6 +29,8 @@ class Settings(BaseSettings):
 
     # Lambda
     LAMBDA_FUNCTION_NAME: str = "lastdance-embedding-generator"
+
+    ENVIRONMENT: str = "production" 
     
     class Config:
         env_file = ".env"
