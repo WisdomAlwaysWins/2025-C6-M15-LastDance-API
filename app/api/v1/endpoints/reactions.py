@@ -1,9 +1,12 @@
 # app/api/v1/endpoints/reactions.py
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Form, File, UploadFile
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import json
+import logging
 
 from app.database import get_db
+from app.utils.s3_client import s3_client
 from app.models.artwork import Artwork
 from app.models.reaction import Reaction
 from app.models.tag import Tag
@@ -15,7 +18,10 @@ from app.schemas.reaction import (
     ReactionDetail
 )
 
+
 router = APIRouter(prefix="/reactions", tags=["Reactions"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("", response_model=List[ReactionResponse])
@@ -76,80 +82,115 @@ def get_reaction(
     return reaction
 
 
-@router.post("", response_model=ReactionDetail, status_code=status.HTTP_201_CREATED)  # ← Response 변경!
-def create_reaction(
-    reaction_data: ReactionCreate,
+@router.post("", response_model=ReactionDetail, status_code=status.HTTP_201_CREATED)
+async def create_reaction(
+    visitor_id: int = Form(...),
+    artwork_id: int = Form(...),
+    visit_id: Optional[int] = Form(None),
+    comment: Optional[str] = Form(None),
+    tag_ids: Optional[str] = Form(None),
+    image: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
     """
-    반응 생성
+    반응 생성 (이미지 포함)
     
     Args:
-        reaction_data: 반응 생성 데이터
+        visitor_id: 관람객 ID
+        artwork_id: 작품 ID
+        visit_id: 방문 기록 ID (선택)
+        comment: 코멘트 (선택)
+        tag_ids: 태그 ID 배열 JSON string (예: "[1,3,5]")
+        image: 촬영한 이미지 파일
         
     Returns:
-        ReactionDetail: 생성된 반응 정보 (작품, 관람객, 태그 포함)
+        ReactionDetail: 생성된 반응 정보 (작품, 관람객, 태그, 이미지 포함)
         
     Raises:
         404: 존재하지 않는 artwork_id, visitor_id, visit_id, tag_ids
-        400: comment와 tag_ids 둘 다 없음
+        500: S3 업로드 실패
         
     Note:
-        comment 또는 tag_ids 중 하나는 필수
+        이미지는 S3 reactions 폴더에 저장됨
     """
+    
     # Artwork 존재 여부 확인
-    artwork = db.query(Artwork).filter(Artwork.id == reaction_data.artwork_id).first()
+    artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
     if not artwork:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artwork with id {reaction_data.artwork_id} not found"
+            detail=f"Artwork with id {artwork_id} not found"
         )
     
     # Visitor 존재 여부 확인
     from app.models.visitor import Visitor
-    visitor = db.query(Visitor).filter(Visitor.id == reaction_data.visitor_id).first()
+    visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Visitor with id {reaction_data.visitor_id} not found"
+            detail=f"Visitor with id {visitor_id} not found"
         )
     
     # Visit 존재 여부 확인 (선택)
-    if reaction_data.visit_id:
-        visit = db.query(VisitHistory).filter(VisitHistory.id == reaction_data.visit_id).first()
+    if visit_id:
+        visit = db.query(VisitHistory).filter(VisitHistory.id == visit_id).first()
         if not visit:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"VisitHistory with id {reaction_data.visit_id} not found"
+                detail=f"VisitHistory with id {visit_id} not found"
             )
     
-    # Reaction 생성 (tag_ids 제외)
-    reaction_dict = reaction_data.model_dump(exclude={'tag_ids'})
-    new_reaction = Reaction(**reaction_dict)
+    # S3에 이미지 업로드
+    try:
+        image_url = await s3_client.upload_file(
+            file=image,
+            folder="reactions"
+        )
+        logger.info(f"✅ S3 업로드 성공: {image_url}")
+    except Exception as e:
+        logger.error(f"❌ S3 업로드 실패: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"이미지 업로드 실패: {str(e)}"
+        )
+    
+    # Reaction 생성
+    new_reaction = Reaction(
+        visitor_id=visitor_id,
+        artwork_id=artwork_id,
+        visit_id=visit_id,
+        comment=comment,
+        image_url=image_url
+    )
     db.add(new_reaction)
     db.commit()
     db.refresh(new_reaction)
     
     # Tag 연결 (M:N)
-    if reaction_data.tag_ids:
-        tags = db.query(Tag).filter(Tag.id.in_(reaction_data.tag_ids)).all()
-        
-        # 존재하지 않는 태그 확인
-        found_ids = {tag.id for tag in tags}
-        missing_ids = set(reaction_data.tag_ids) - found_ids
-        if missing_ids:
-            db.delete(new_reaction)  # 롤백
+    if tag_ids:
+        try:
+            tag_id_list = json.loads(tag_ids)
+            tags = db.query(Tag).filter(Tag.id.in_(tag_id_list)).all()
+            
+            # 존재하지 않는 태그 확인
+            found_ids = {tag.id for tag in tags}
+            missing_ids = set(tag_id_list) - found_ids
+            if missing_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Tags with ids {sorted(missing_ids)} not found"
+                )
+            
+            new_reaction.tags.extend(tags)
             db.commit()
+            db.refresh(new_reaction)
+        except json.JSONDecodeError:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Tags with ids {sorted(missing_ids)} not found"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="tag_ids must be a valid JSON array string"
             )
-        
-        new_reaction.tags.extend(tags)
-        db.commit()
-        db.refresh(new_reaction)
     
-    return new_reaction  # ReactionDetail로 자동 변환
+    return new_reaction
 
 
 @router.put("/{reaction_id}", response_model=ReactionResponse)

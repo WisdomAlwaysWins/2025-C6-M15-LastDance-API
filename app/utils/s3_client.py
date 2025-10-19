@@ -2,7 +2,9 @@ import boto3
 from botocore.exceptions import ClientError
 from typing import Optional
 import uuid
-from pathlib import Path
+import time
+import os
+from fastapi import UploadFile
 from app.config import settings
 import logging
 
@@ -21,44 +23,62 @@ class S3Client:
         )
         self.bucket_name = settings.S3_BUCKET_NAME
     
-    def upload_file(
+    async def upload_file(
         self,
-        file_content: bytes,
-        file_extension: str,
-        folder: str = "images"
-    ) -> Optional[str]:
+        file: UploadFile,
+        folder: str,
+        exhibition_id: int = None,
+        visitor_id: int = None
+    ) -> str:
         """
         S3에 파일 업로드
         
         Args:
-            file_content: 파일 바이트 데이터
-            file_extension: 파일 확장자 (예: 'jpg', 'png')
-            folder: S3 내 폴더 경로 (예: 'artworks', 'reviews')
+            file: 업로드할 파일
+            folder: 폴더 (reactions, artworks 등)
+            exhibition_id: 전시 ID
+            visitor_id: 관람객 ID
         
         Returns:
-            업로드된 파일의 S3 URL 또는 None (실패 시)
+            str: S3 파일 URL
         """
         try:
-            # 고유한 파일명 생성
-            file_name = f"{folder}/{uuid.uuid4()}.{file_extension}"
+            # 파일 읽기
+            contents = await file.read()
             
-            # S3에 업로드
+            # 환경 (production or test)
+            env = os.getenv("ENVIRONMENT", "production")
+            
+            # 파일명 생성
+            timestamp = int(time.time())
+            file_extension = file.filename.split('.')[-1] if file.filename else 'jpg'
+            unique_id = str(uuid.uuid4())[:8]
+            
+            # reactions 폴더 구조
+            if folder == "reactions" and exhibition_id and visitor_id:
+                s3_key = f"{folder}/{env}/exhibition_{exhibition_id}/visitor_{visitor_id}_{timestamp}_{unique_id}.{file_extension}"
+            else:
+                # 기존 방식
+                filename = f"{uuid.uuid4()}.{file_extension}"
+                s3_key = f"{folder}/{filename}"
+            
+            # S3 업로드
             self.s3_client.put_object(
-                Bucket=self.bucket_name,
-                Key=file_name,
-                Body=file_content,
-                ContentType=f"image/{file_extension}"
+                Bucket=settings.S3_BUCKET_NAME,
+                Key=s3_key,
+                Body=contents,
+                ContentType=file.content_type or 'image/jpeg'
             )
             
-            # 업로드된 파일의 URL 생성
-            file_url = f"https://{self.bucket_name}.s3.{settings.AWS_REGION}.amazonaws.com/{file_name}"
+            # URL 생성
+            file_url = f"https://{settings.S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
             
-            logger.info(f"File uploaded successfully: {file_url}")
+            logger.info(f"✅ S3 업로드 성공: {s3_key}")
             return file_url
             
-        except ClientError as e:
-            logger.error(f"Failed to upload file to S3: {e}")
-            return None
+        except Exception as e:
+            logger.error(f"❌ S3 업로드 실패: {e}")
+            raise
     
     def delete_file(self, file_url: str) -> bool:
         """

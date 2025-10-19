@@ -21,11 +21,16 @@ class Settings(BaseSettings):
     AWS_REGION: str = "ap-northeast-2"
     AWS_LAMBDA_REGION: str 
     S3_BUCKET_NAME: str
+
+    # HuggingFace
+    HUGGINGFACE_TOKEN: str
     
     HUGGINGFACE_TOKEN: str
 
     # Lambda
     LAMBDA_FUNCTION_NAME: str = "lastdance-embedding-generator"
+
+    ENVIRONMENT: str = "production" 
     
     class Config:
         env_file = ".env"
