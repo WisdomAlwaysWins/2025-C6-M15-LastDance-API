@@ -71,7 +71,7 @@ services:
         echo '✅ Database is ready!' &&
         echo '🗃️  Running migrations...' &&
         echo '🚀 Starting API server...' &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level warning
       "
 
 volumes:

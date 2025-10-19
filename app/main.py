@@ -1,7 +1,17 @@
+import logging
+
 from app.api.v1 import api_router
 from app.config import settings
+from app.middleware.logging import LoggingMiddleware
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+
+# 로깅 기본 설정 (가장 먼저!)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:\t%(message)s"
+)
 
 # FastAPI 앱 생성
 app = FastAPI(
@@ -20,6 +30,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(LoggingMiddleware)
 
 
 # 헬스체크 엔드포인트
