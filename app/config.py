@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     # HuggingFace
     HUGGINGFACE_TOKEN: str
     
+    HUGGINGFACE_TOKEN: str
+
+    # Lambda
+    LAMBDA_FUNCTION_NAME: str = "lastdance-embedding-generator"
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

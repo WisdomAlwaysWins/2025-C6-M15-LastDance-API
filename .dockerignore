@@ -34,6 +34,7 @@ docker-compose.override.yml
 
 # Test
 test_*.py
+!test_embedding.py
 tests/
 
 # Uploads
