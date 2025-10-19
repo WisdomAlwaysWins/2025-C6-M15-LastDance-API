@@ -80,7 +80,7 @@ def get_visit_histories(
     if exhibition_id:
         query = query.filter(VisitHistory.exhibition_id == exhibition_id)
     
-    visits = query.order_by(VisitHistory.created_at.desc()).all()
+    visits = query.order_by(VisitHistory.id).all()
     return visits
 
 
