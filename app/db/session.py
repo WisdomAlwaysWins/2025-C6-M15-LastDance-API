@@ -1,9 +1,9 @@
 # app/db/session.py
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import os
 
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 # .env 파일 로드
 load_dotenv()
@@ -12,10 +12,11 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # SQLAlchemy 엔진 생성
-engine = create_engine(DATABASE_URL)
+engine = create_engine(str(DATABASE_URL))
 
 # 세션 팩토리 생성
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 # DB 세션 의존성
 def get_db():

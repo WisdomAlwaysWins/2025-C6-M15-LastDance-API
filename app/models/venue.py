@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, DateTime, Float, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -9,6 +9,7 @@ class Venue(Base):
     """
     전시 장소 모델
     """
+
     __tablename__ = "venues"
 
     id = Column(Integer, primary_key=True, index=True)

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -9,6 +9,7 @@ class TagCategory(Base):
     """
     태그 카테고리 모델
     """
+
     __tablename__ = "tag_categories"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -21,4 +22,6 @@ class TagCategory(Base):
     tags = relationship("Tag", back_populates="category")
 
     def __repr__(self):
-        return f"<TagCategory(id={self.id}, name={self.name}, color_hex={self.color_hex})>"
+        return (
+            f"<TagCategory(id={self.id}, name={self.name}, color_hex={self.color_hex})>"
+        )
