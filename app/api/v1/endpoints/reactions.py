@@ -33,11 +33,16 @@ router = APIRouter(prefix="/reactions", tags=["Reactions"])
 logger = logging.getLogger(__name__)
 
 
-@router.get("", response_model=List[ReactionResponse])
+@router.get(
+    "",
+    response_model=List[ReactionResponse],
+    summary="반응 목록 조회",
+    description="반응 목록을 조회합니다. artwork_id, visitor_id, visit_id로 필터링 가능합니다.",
+)
 def get_reactions(
-    artwork_id: Optional[int] = Query(None, description="작품 ID"),
-    visitor_id: Optional[int] = Query(None, description="관람객 ID"),
-    visit_id: Optional[int] = Query(None, description="방문 기록 ID"),
+    artwork_id: Optional[int] = Query(None, description="작품 ID로 필터링"),
+    visitor_id: Optional[int] = Query(None, description="관람객 ID로 필터링"),
+    visit_id: Optional[int] = Query(None, description="방문 기록 ID로 필터링"),
     db: Session = Depends(get_db),
 ):
     """
@@ -65,7 +70,12 @@ def get_reactions(
     return reactions
 
 
-@router.get("/{reaction_id}", response_model=ReactionDetail)
+@router.get(
+    "/{reaction_id}", 
+    response_model=ReactionDetail,
+    summary="반응 상세 조회",
+    description="반응 ID로 상세 정보를 조회합니다. 작품, 관람객, 태그 정보 포함.",
+)
 def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
     반응 상세 조회 (작품, 관람객, 태그 포함)
@@ -88,7 +98,13 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     return reaction
 
 
-@router.post("", response_model=ReactionDetail, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", 
+    response_model=ReactionDetail, 
+    status_code=status.HTTP_201_CREATED,
+    summary="반응 생성",
+    description="새 반응을 생성합니다. 이미지 업로드 및 태그 연결 포함.",
+)
 async def create_reaction(
     visitor_id: int = Form(...),
     artwork_id: int = Form(...),
@@ -197,7 +213,12 @@ async def create_reaction(
     return new_reaction
 
 
-@router.put("/{reaction_id}", response_model=ReactionResponse)
+@router.put(
+    "/{reaction_id}", 
+    response_model=ReactionResponse,
+    summary="반응 수정",
+    description="반응의 코멘트 또는 태그를 수정합니다.",
+)
 def update_reaction(
     reaction_id: int, reaction_data: ReactionUpdate, db: Session = Depends(get_db)
 ):
@@ -258,7 +279,12 @@ def update_reaction(
     return reaction
 
 
-@router.delete("/{reaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{reaction_id}", 
+    status_code=204,
+    summary="반응 삭제",
+    description="반응을 삭제합니다. 연결된 S3 이미지도 함께 삭제됩니다.",
+)
 async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
     반응 삭제 (촬영한 이미지도 함께 삭제)

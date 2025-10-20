@@ -17,7 +17,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 router = APIRouter(prefix="/tag-categories", tags=["Tag Categories"])
 
 
-@router.get("", response_model=List[TagCategoryResponse])
+@router.get(
+    "",
+    response_model=List[TagCategoryResponse],
+    summary="태그 카테고리 목록 조회",
+    description="태그 카테고리 목록을 조회합니다.",
+)
 def get_tag_categories(db: Session = Depends(get_db)):
     """
     태그 카테고리 전체 조회 (ID 순)
@@ -29,7 +34,12 @@ def get_tag_categories(db: Session = Depends(get_db)):
     return categories
 
 
-@router.get("/{category_id}", response_model=TagCategoryDetail)
+@router.get(
+    "/{category_id}",
+    response_model=TagCategoryDetail,
+    summary="태그 카테고리 상세 조회",
+    description="태그 카테고리 ID로 상세 정보를 조회합니다. 포함된 태그 목록 포함.",
+)
 def get_tag_category(category_id: int, db: Session = Depends(get_db)):
     """
     태그 카테고리 상세 조회 (태그 목록 포함)
@@ -53,7 +63,11 @@ def get_tag_category(category_id: int, db: Session = Depends(get_db)):
 
 
 @router.post(
-    "", response_model=TagCategoryResponse, status_code=status.HTTP_201_CREATED
+    "",
+    response_model=TagCategoryDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="태그 카테고리 생성",
+    description="새 태그 카테고리를 생성합니다. (관리자 전용, API Key 필요)",
 )
 def create_tag_category(
     category_data: TagCategoryCreate,
@@ -90,7 +104,12 @@ def create_tag_category(
     return new_category
 
 
-@router.put("/{category_id}", response_model=TagCategoryResponse)
+@router.put(
+    "/{category_id}",
+    response_model=TagCategoryDetail,
+    summary="태그 카테고리 수정",
+    description="태그 카테고리 정보를 수정합니다. (관리자 전용, API Key 필요)",
+)
 def update_tag_category(
     category_id: int,
     category_data: TagCategoryUpdate,
@@ -143,7 +162,12 @@ def update_tag_category(
     return category
 
 
-@router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{category_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="태그 카테고리 삭제",
+    description="태그 카테고리를 삭제합니다. (관리자 전용, API Key 필요)",
+)
 def delete_tag_category(
     category_id: int, db: Session = Depends(get_db), _: bool = Depends(verify_api_key)
 ):

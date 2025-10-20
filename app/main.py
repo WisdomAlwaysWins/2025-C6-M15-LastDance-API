@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 # from app.utils.cloudwatch import setup_cloudwatch_logging, setup_console_logging
 
 
-
 # 로깅 설정
 # if settings.ENVIRONMENT in ["production", "test"]:
 #     setup_cloudwatch_logging()

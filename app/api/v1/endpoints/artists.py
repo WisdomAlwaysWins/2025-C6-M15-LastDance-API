@@ -11,7 +11,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 router = APIRouter(prefix="/artists", tags=["Artists"])
 
 
-@router.get("", response_model=List[ArtistResponse])
+@router.get(
+    "",
+    response_model=List[ArtistResponse],
+    summary="작가 목록 조회",
+    description="작가 목록을 조회합니다.",
+)
 def get_artists(db: Session = Depends(get_db)):
     """
     작가 전체 조회
@@ -19,11 +24,16 @@ def get_artists(db: Session = Depends(get_db)):
     Returns:
         List[ArtistResponse]: 작가 목록
     """
-    artists = db.query(Artist).order_by(Artist.name).all()
+    artists = db.query(Artist).order_by(Artist.id).all()
     return artists
 
 
-@router.get("/{artist_id}", response_model=ArtistResponse)
+@router.get(
+    "/{artist_id}",
+    response_model=ArtistResponse,
+    summary="작가 상세 조회",
+    description="작가 ID로 상세 정보를 조회합니다.",
+)
 def get_artist(artist_id: int, db: Session = Depends(get_db)):
     """
     작가 상세 조회
@@ -69,7 +79,13 @@ def get_artist_by_uuid(uuid: str, db: Session = Depends(get_db)):
     return artist
 
 
-@router.post("", response_model=ArtistResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ArtistResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="작가 생성",
+    description="새 작가를 등록합니다. (관리자 전용, API Key 필요)",
+)
 def create_artist(artist_data: ArtistCreate, db: Session = Depends(get_db)):
     """
     작가 생성 (관리자)
@@ -90,7 +106,12 @@ def create_artist(artist_data: ArtistCreate, db: Session = Depends(get_db)):
     return new_artist
 
 
-@router.put("/{artist_id}", response_model=ArtistResponse)
+@router.put(
+    "/{artist_id}",
+    response_model=ArtistResponse,
+    summary="작가 수정",
+    description="작가 정보를 수정합니다. (관리자 전용, API Key 필요)",
+)
 def update_artist(
     artist_id: int, artist_data: ArtistUpdate, db: Session = Depends(get_db)
 ):
@@ -123,7 +144,12 @@ def update_artist(
     return artist
 
 
-@router.delete("/{artist_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{artist_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="작가 삭제",
+    description="작가를 삭제합니다. (관리자 전용, API Key 필요)",
+)
 def delete_artist(artist_id: int, db: Session = Depends(get_db)):
     """
     작가 삭제 (관리자)

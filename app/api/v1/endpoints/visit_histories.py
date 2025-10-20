@@ -56,7 +56,12 @@ def create_visit_history(visit_data: VisitHistoryCreate, db: Session = Depends(g
     return new_visit
 
 
-@router.get("", response_model=List[VisitHistoryResponse])
+@router.get(
+    "",
+    response_model=List[VisitHistoryResponse],
+    summary="방문 기록 목록 조회",
+    description="방문 기록 목록을 조회합니다. visitor_id와 exhibition_id로 필터링 가능합니다.",
+)
 def get_visit_histories(
     visitor_id: int = None, exhibition_id: int = None, db: Session = Depends(get_db)
 ):
@@ -81,7 +86,12 @@ def get_visit_histories(
     return visits
 
 
-@router.get("/{visit_id}", response_model=VisitHistoryResponse)
+@router.get(
+    "/{visit_id}",
+    response_model=VisitHistoryResponse,
+    summary="방문 기록 상세 조회",
+    description="방문 기록 ID로 상세 정보를 조회합니다.",
+)
 def get_visit_history(visit_id: int, db: Session = Depends(get_db)):
     """
     방문 기록 상세 조회
