@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.api.deps import verify_api_key
 from app.database import get_db
 from app.models.artist import Artist
 from app.models.artwork import Artwork
@@ -88,7 +89,11 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ArtworkDetail, status_code=status.HTTP_201_CREATED)
-def create_artwork(artwork_data: ArtworkCreate, db: Session = Depends(get_db)):
+def create_artwork(
+    artwork_data: ArtworkCreate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
+):
     """
     작품 생성 (관리자)
 
@@ -115,7 +120,10 @@ def create_artwork(artwork_data: ArtworkCreate, db: Session = Depends(get_db)):
 
 @router.put("/{artwork_id}", response_model=ArtworkDetail)
 def update_artwork(
-    artwork_id: int, artwork_data: ArtworkUpdate, db: Session = Depends(get_db)
+    artwork_id: int,
+    artwork_data: ArtworkUpdate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
 ):
     """
     작품 정보 수정 (관리자)
@@ -149,7 +157,11 @@ def update_artwork(
 
 
 @router.delete("/{artwork_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_artwork(artwork_id: int, db: Session = Depends(get_db)):
+def delete_artwork(
+    artwork_id: int,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
+):
     """
     작품 삭제 (관리자)
     """

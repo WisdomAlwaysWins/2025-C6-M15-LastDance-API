@@ -3,10 +3,11 @@ import logging
 from app.api.v1 import api_router
 from app.config import settings
 from app.middleware.logging import LoggingMiddleware
-# from app.utils.cloudwatch import setup_cloudwatch_logging, setup_console_logging
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# from app.utils.cloudwatch import setup_cloudwatch_logging, setup_console_logging
+
 
 
 # 로깅 설정
@@ -16,10 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 #     setup_console_logging() # 로컬 개발
 
 # 로깅 기본 설정
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s:\t%(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:\t%(message)s")
 
 # FastAPI 앱 생성
 app = FastAPI(

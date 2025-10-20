@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.api.deps import verify_api_key
 from app.database import get_db
 from app.models.artwork import Artwork
 from app.models.exhibition import Exhibition
@@ -81,7 +82,11 @@ def get_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=ExhibitionDetail, status_code=status.HTTP_201_CREATED)
-def create_exhibition(exhibition_data: ExhibitionCreate, db: Session = Depends(get_db)):
+def create_exhibition(
+    exhibition_data: ExhibitionCreate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
+):
     """
     전시 생성 (관리자)
 
@@ -139,7 +144,10 @@ def create_exhibition(exhibition_data: ExhibitionCreate, db: Session = Depends(g
 
 @router.put("/{exhibition_id}", response_model=ExhibitionDetail)
 def update_exhibition(
-    exhibition_id: int, exhibition_data: ExhibitionUpdate, db: Session = Depends(get_db)
+    exhibition_id: int,
+    exhibition_data: ExhibitionUpdate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
 ):
     """
     전시 정보 수정 (관리자)
@@ -202,7 +210,11 @@ def update_exhibition(
 
 
 @router.delete("/{exhibition_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
+def delete_exhibition(
+    exhibition_id: int,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
+):
     """
     전시 삭제 (관리자)
     """

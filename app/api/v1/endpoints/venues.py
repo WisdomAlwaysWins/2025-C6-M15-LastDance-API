@@ -3,6 +3,7 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
+from app.api.deps import verify_api_key
 from app.database import get_db
 from app.models.venue import Venue
 from app.schemas.venue import VenueCreate, VenueResponse, VenueUpdate
@@ -47,7 +48,11 @@ def get_venue(venue_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=VenueResponse, status_code=status.HTTP_201_CREATED)
-def create_venue(venue_data: VenueCreate, db: Session = Depends(get_db)):
+def create_venue(
+    venue_data: VenueCreate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
+):
     """
     전시 장소 생성 (관리자)
 
@@ -65,7 +70,12 @@ def create_venue(venue_data: VenueCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{venue_id}", response_model=VenueResponse)
-def update_venue(venue_id: int, venue_data: VenueUpdate, db: Session = Depends(get_db)):
+def update_venue(
+    venue_id: int,
+    venue_data: VenueUpdate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
+):
     """
     전시 장소 수정 (관리자)
 
@@ -96,7 +106,9 @@ def update_venue(venue_id: int, venue_data: VenueUpdate, db: Session = Depends(g
 
 
 @router.delete("/{venue_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_venue(venue_id: int, db: Session = Depends(get_db)):
+def delete_venue(
+    venue_id: int, db: Session = Depends(get_db), _: bool = Depends(verify_api_key)
+):
     """
     전시 장소 삭제 (관리자)
 

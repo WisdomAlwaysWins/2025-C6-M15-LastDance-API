@@ -1,14 +1,14 @@
 import logging
 import os
 import time
-import uuid
 from typing import Optional
+import uuid
 
 import boto3
 from botocore.exceptions import ClientError
-from fastapi import UploadFile
 
 from app.config import settings
+from fastapi import UploadFile
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,11 @@ class S3Client:
             contents = await file.read()
 
             # 환경 (production or test or local)
-            env = settings.ENVIRONMENT if settings.ENVIRONMENT in ["production", "test"] else "local"
+            env = (
+                settings.ENVIRONMENT
+                if settings.ENVIRONMENT in ["production", "test"]
+                else "local"
+            )
 
             # 파일명 생성
             timestamp = int(time.time())

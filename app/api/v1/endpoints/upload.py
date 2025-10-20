@@ -1,9 +1,8 @@
 import logging
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
-
 from app.schemas.upload import DeleteImageResponse, UploadResponse
 from app.utils.s3_client import s3_client
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/upload", tags=["Upload"])
@@ -27,7 +26,9 @@ def validate_image(file: UploadFile) -> str:
     """
     # 파일 확장자 추출
     if not file.filename:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="파일명이 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="파일명이 없습니다"
+        )
 
     extension = file.filename.split(".")[-1].lower()
 
@@ -80,7 +81,8 @@ async def upload_image(
     except Exception as e:
         logger.error(f"업로드 오류: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="파일 업로드 중 오류가 발생했습니다"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="파일 업로드 중 오류가 발생했습니다",
         )
 
 
@@ -112,7 +114,8 @@ async def upload_exhibition_poster(
     except Exception as e:
         logger.error(f"전시 포스터 업로드 오류: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="파일 업로드 중 오류가 발생했습니다"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="파일 업로드 중 오류가 발생했습니다",
         )
 
 
@@ -144,7 +147,8 @@ async def upload_artwork_thumbnail(
     except Exception as e:
         logger.error(f"작품 썸네일 업로드 오류: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="파일 업로드 중 오류가 발생했습니다"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="파일 업로드 중 오류가 발생했습니다",
         )
 
 
@@ -176,7 +180,8 @@ async def upload_reaction_image(
     except Exception as e:
         logger.error(f"반응 이미지 업로드 오류: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="파일 업로드 중 오류가 발생했습니다"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="파일 업로드 중 오류가 발생했습니다",
         )
 
 
@@ -216,10 +221,14 @@ async def delete_image(url: str = Query(..., description="삭제할 S3 이미지
                 success=True, message="이미지가 성공적으로 삭제되었습니다."
             )
         else:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="이미지 삭제에 실패했습니다.")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="이미지 삭제에 실패했습니다.",
+            )
 
     except Exception as e:
         logger.error(f"이미지 삭제 오류: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"이미지 삭제 중 오류가 발생했습니다: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"이미지 삭제 중 오류가 발생했습니다: {str(e)}",
         )
