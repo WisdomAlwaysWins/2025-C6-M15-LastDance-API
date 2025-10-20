@@ -3,11 +3,19 @@ import logging
 from app.api.v1 import api_router
 from app.config import settings
 from app.middleware.logging import LoggingMiddleware
+# from app.utils.cloudwatch import setup_cloudwatch_logging, setup_console_logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 
-# 로깅 기본 설정 (가장 먼저!)
+# 로깅 설정
+# if settings.ENVIRONMENT in ["production", "test"]:
+#     setup_cloudwatch_logging()
+# else:
+#     setup_console_logging() # 로컬 개발
+
+# 로깅 기본 설정
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s:\t%(message)s"

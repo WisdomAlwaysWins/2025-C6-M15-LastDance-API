@@ -48,8 +48,8 @@ class S3Client:
             # 파일 읽기
             contents = await file.read()
 
-            # 환경 (production or test)
-            env = settings.ENVIRONMENT
+            # 환경 (production or test or local)
+            env = settings.ENVIRONMENT if settings.ENVIRONMENT in ["production", "test"] else "local"
 
             # 파일명 생성
             timestamp = int(time.time())

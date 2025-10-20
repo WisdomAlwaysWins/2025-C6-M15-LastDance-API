@@ -65,10 +65,12 @@ torch==2.5.1
 torchvision==0.20.1
 tqdm==4.67.1
 transformers==4.46.0
+types-requests==2.32.4.20250913
 typing_extensions==4.15.0
 urllib3==2.5.0
 uvicorn==0.27.0
 uvloop==0.21.0
 watchfiles==1.1.0
+watchtower==3.4.0
 wcwidth==0.2.14
 websockets==15.0.1
