@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.api.deps import verify_api_key
 from app.database import get_db
 from app.models.tag import Tag
 from app.models.tag_category import TagCategory
@@ -61,7 +62,11 @@ def get_tag(tag_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=TagDetail, status_code=status.HTTP_201_CREATED)
-def create_tag(tag_data: TagCreate, db: Session = Depends(get_db)):
+def create_tag(
+    tag_data: TagCreate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
+):
     """
     태그 생성 (관리자)
 
@@ -98,7 +103,12 @@ def create_tag(tag_data: TagCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/{tag_id}", response_model=TagDetail)
-def update_tag(tag_id: int, tag_data: TagUpdate, db: Session = Depends(get_db)):
+def update_tag(
+    tag_id: int,
+    tag_data: TagUpdate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
+):
     """
     태그 수정 (관리자)
 
@@ -144,7 +154,11 @@ def update_tag(tag_id: int, tag_data: TagUpdate, db: Session = Depends(get_db)):
 
 
 @router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_tag(tag_id: int, db: Session = Depends(get_db)):
+def delete_tag(
+    tag_id: int,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
+):
     """
     태그 삭제 (관리자)
     """

@@ -44,6 +44,12 @@ services:
       
       # HuggingFace
       HUGGINGFACE_TOKEN: ${HUGGINGFACE_TOKEN}
+
+      # 환경 설정
+      ENVIRONMENT: ${ENVIRONMENT:-test}
+    
+      # Admin API Key (추가!)
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
     
     ports:
       - "8000:8000"

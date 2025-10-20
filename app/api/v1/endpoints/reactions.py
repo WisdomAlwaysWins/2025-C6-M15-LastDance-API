@@ -265,7 +265,9 @@ async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
     reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
     if not reaction:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="반응을 찾을 수 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="반응을 찾을 수 없습니다"
+        )
 
     # S3에서 이미지 삭제 (있는 경우)
     if reaction.image_url:

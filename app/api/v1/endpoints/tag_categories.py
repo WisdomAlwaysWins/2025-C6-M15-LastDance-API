@@ -3,6 +3,7 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
+from app.api.deps import verify_api_key
 from app.database import get_db
 from app.models.tag_category import TagCategory
 from app.schemas.tag_category import (
@@ -55,7 +56,9 @@ def get_tag_category(category_id: int, db: Session = Depends(get_db)):
     "", response_model=TagCategoryResponse, status_code=status.HTTP_201_CREATED
 )
 def create_tag_category(
-    category_data: TagCategoryCreate, db: Session = Depends(get_db)
+    category_data: TagCategoryCreate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
 ):
     """
     태그 카테고리 생성 (관리자)
@@ -89,7 +92,10 @@ def create_tag_category(
 
 @router.put("/{category_id}", response_model=TagCategoryResponse)
 def update_tag_category(
-    category_id: int, category_data: TagCategoryUpdate, db: Session = Depends(get_db)
+    category_id: int,
+    category_data: TagCategoryUpdate,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_api_key),
 ):
     """
     태그 카테고리 수정 (관리자)
@@ -138,7 +144,9 @@ def update_tag_category(
 
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_tag_category(category_id: int, db: Session = Depends(get_db)):
+def delete_tag_category(
+    category_id: int, db: Session = Depends(get_db), _: bool = Depends(verify_api_key)
+):
     """
     태그 카테고리 삭제 (관리자)
 

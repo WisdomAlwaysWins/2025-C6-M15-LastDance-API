@@ -31,6 +31,9 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = "local"
 
+    # Admin API Key
+    ADMIN_API_KEY: str
+
     class Config:
         env_file = ".env"
         case_sensitive = True
