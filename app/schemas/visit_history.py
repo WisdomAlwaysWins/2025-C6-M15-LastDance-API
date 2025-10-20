@@ -1,12 +1,12 @@
-from datetime import datetime
-from typing import TYPE_CHECKING, List
+from datetime import datetime, date
+from typing import List
 
 from pydantic import BaseModel, Field
 
-if TYPE_CHECKING:
-    from app.schemas.exhibition import ExhibitionResponse
-    from app.schemas.reaction import ReactionResponse
-    from app.schemas.visitor import VisitorResponse
+from app.schemas.artwork import ArtworkResponse
+from app.schemas.exhibition import ExhibitionResponse
+from app.schemas.reaction import ReactionResponse
+from app.schemas.visitor import VisitorResponse
 
 
 class VisitHistoryCreate(BaseModel):

@@ -3,10 +3,9 @@ from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import BaseModel, Field, validator
 
-if TYPE_CHECKING:
-    from app.schemas.artwork import ArtworkResponse
-    from app.schemas.tag import TagResponse
-    from app.schemas.visitor import VisitorResponse
+from app.schemas.artwork import ArtworkResponse
+from app.schemas.tag import TagResponse
+from app.schemas.visitor import VisitorResponse
 
 
 class ReactionCreate(BaseModel):
@@ -84,6 +83,7 @@ class ReactionResponse(BaseModel):
 
     id: int
     artwork_id: int
+    artwork: ArtworkResponse
     visitor_id: int
     visit_id: Optional[int] = None
     comment: Optional[str] = None
