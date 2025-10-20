@@ -39,4 +39,3 @@ disable_error_code = ["var-annotated"]
 [[tool.mypy.overrides]]
 module = "app.api.v1.endpoints.*"
 disable_error_code = ["operator", "union-attr"]  # Admin API Key (추가!)
-    ADMIN_API_KEY: ${ADMIN_API_KEY}

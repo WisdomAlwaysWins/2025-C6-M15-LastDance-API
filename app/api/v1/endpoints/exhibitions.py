@@ -20,7 +20,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 router = APIRouter(prefix="/exhibitions", tags=["Exhibitions"])
 
 
-@router.get("", response_model=List[ExhibitionResponse])
+@router.get(
+    "",
+    response_model=List[ExhibitionResponse],
+    summary="전시 목록 조회",
+    description="전시 목록을 조회합니다. status와 venue_id로 필터링 가능합니다.",
+)
 def get_exhibitions(
     status: Optional[str] = Query(None, description="ongoing/upcoming/past"),
     venue_id: Optional[int] = Query(None, description="전시 장소 ID"),
@@ -63,11 +68,16 @@ def get_exhibitions(
     elif status == "past":
         query = query.filter(Exhibition.end_date < today)
 
-    exhibitions = query.order_by(Exhibition.start_date.desc()).all()
+    exhibitions = query.order_by(Exhibition.id).all()
     return exhibitions
 
 
-@router.get("/{exhibition_id}", response_model=ExhibitionDetail)
+@router.get(
+    "/{exhibition_id}",
+    response_model=ExhibitionDetail,
+    summary="전시 상세 조회",
+    description="전시 ID로 상세 정보를 조회합니다. 장소 및 작품 목록 포함",
+)
 def get_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
     """
     전시 상세 조회 (장소, 작품 목록 포함)
@@ -81,7 +91,13 @@ def get_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
     return exhibition
 
 
-@router.post("", response_model=ExhibitionDetail, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ExhibitionDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="전시 생성",
+    description="새 전시를 생성합니다. (관리자 전용, API Key 필요)",
+)
 def create_exhibition(
     exhibition_data: ExhibitionCreate,
     db: Session = Depends(get_db),
@@ -142,7 +158,12 @@ def create_exhibition(
     return new_exhibition
 
 
-@router.put("/{exhibition_id}", response_model=ExhibitionDetail)
+@router.put(
+    "/{exhibition_id}",
+    response_model=ExhibitionDetail,
+    summary="전시 수정",
+    description="전시 정보를 수정합니다. (관리자 전용, API Key 필요)",
+)
 def update_exhibition(
     exhibition_id: int,
     exhibition_data: ExhibitionUpdate,
@@ -209,7 +230,12 @@ def update_exhibition(
     return exhibition
 
 
-@router.delete("/{exhibition_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{exhibition_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="전시 삭제",
+    description="전시를 삭제합니다. (관리자 전용, API Key 필요)",
+)
 def delete_exhibition(
     exhibition_id: int,
     db: Session = Depends(get_db),

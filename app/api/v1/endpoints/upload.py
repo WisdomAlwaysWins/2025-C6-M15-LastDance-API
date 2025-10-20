@@ -45,20 +45,7 @@ def validate_image(file: UploadFile) -> str:
     "",
     response_model=UploadResponse,
     summary="이미지 업로드",
-    description="""
-    이미지 S3 업로드
-
-    Args:
-        file: 이미지 파일 (jpg, jpeg, png, gif, webp)
-        folder: 저장 폴더 (images/artworks/exhibitions/reactions)
-
-    Returns:
-        UploadResponse: 업로드된 파일 URL
-
-    Raises:
-        400: 잘못된 파일 형식
-        500: S3 업로드 실패
-    """,
+    description="이미지를 S3에 업로드합니다. folder 파라미터로 저장 위치 지정 가능.",
 )
 async def upload_image(
     file: UploadFile = File(..., description="이미지 파일"),
@@ -90,11 +77,7 @@ async def upload_image(
     "/exhibition",
     response_model=UploadResponse,
     summary="전시 포스터 업로드",
-    description="""
-    전시 포스터 업로드
-
-    전용 엔드포인트로 자동으로 'exhibitions' 폴더에 저장
-    """,
+    description="전시 포스터를 업로드합니다. 자동으로 exhibitions 폴더에 저장됩니다.",
 )
 async def upload_exhibition_poster(
     file: UploadFile = File(..., description="전시 포스터 이미지")
@@ -123,11 +106,7 @@ async def upload_exhibition_poster(
     "/artwork",
     response_model=UploadResponse,
     summary="작품 썸네일 업로드",
-    description="""
-    작품 썸네일 업로드
-
-    전용 엔드포인트로 자동으로 'artworks' 폴더에 저장
-    """,
+    description="작품 썸네일을 업로드합니다. 자동으로 artworks 폴더에 저장됩니다.",
 )
 async def upload_artwork_thumbnail(
     file: UploadFile = File(..., description="작품 썸네일 이미지")
@@ -156,11 +135,7 @@ async def upload_artwork_thumbnail(
     "/reaction",
     response_model=UploadResponse,
     summary="반응 이미지 업로드",
-    description="""
-    반응 이미지 업로드 (선택 사항)
-
-    전용 엔드포인트로 자동으로 'reactions' 폴더에 저장
-    """,
+    description="반응 이미지를 업로드합니다. 자동으로 reactions 폴더에 저장됩니다.",
 )
 async def upload_reaction_image(
     file: UploadFile = File(..., description="반응 이미지")
@@ -189,23 +164,7 @@ async def upload_reaction_image(
     "",
     response_model=DeleteImageResponse,
     summary="이미지 삭제",
-    description="""
-    S3에서 이미지 삭제
-
-    사용 케이스:
-    - Reaction 저장 전 취소 시
-    - 잘못 업로드한 이미지 정리
-    - 임시 업로드 파일 삭제
-
-    Args:
-        url: 삭제할 S3 이미지 URL (Query Parameter)
-
-    Returns:
-        DeleteImageResponse: 삭제 성공 여부
-
-    Example:
-        DELETE /api/v1/upload?url=https://bucket.s3.region.amazonaws.com/reactions/abc.jpg
-    """,
+    description="S3에서 이미지를 삭제합니다. URL 파라미터로 삭제할 이미지 지정.",
 )
 async def delete_image(url: str = Query(..., description="삭제할 S3 이미지 URL")):
     """

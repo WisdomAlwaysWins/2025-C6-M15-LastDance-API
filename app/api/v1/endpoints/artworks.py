@@ -25,7 +25,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/artworks", tags=["Artworks"])
 
 
-@router.get("", response_model=List[ArtworkResponse])
+@router.get(
+    "",
+    response_model=List[ArtworkResponse],
+    summary="작품 목록 조회",
+    description="작품 목록을 조회합니다. artist_id와 exhibition_id로 필터링 가능합니다.",
+)
 def get_artworks(
     artist_id: Optional[int] = Query(None, description="작가 ID"),
     exhibition_id: Optional[int] = Query(None, description="전시 ID"),
@@ -74,7 +79,12 @@ def get_artworks(
     return artworks
 
 
-@router.get("/{artwork_id}", response_model=ArtworkDetail)
+@router.get(
+    "/{artwork_id}",
+    response_model=ArtworkDetail,
+    summary="작품 상세 조회",
+    description="작품 ID로 상세 정보를 조회합니다. 작가 및 전시 정보 포함.",
+)
 def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
     """
     작품 상세 조회 (작가, 전시 정보 포함)
@@ -88,7 +98,13 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
     return artwork
 
 
-@router.post("", response_model=ArtworkDetail, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ArtworkDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="작품 생성",
+    description="새 작품을 등록합니다. (관리자 전용, API Key 필요)",
+)
 def create_artwork(
     artwork_data: ArtworkCreate,
     db: Session = Depends(get_db),
@@ -118,7 +134,12 @@ def create_artwork(
     return new_artwork
 
 
-@router.put("/{artwork_id}", response_model=ArtworkDetail)
+@router.put(
+    "/{artwork_id}",
+    response_model=ArtworkDetail,
+    summary="작품 수정",
+    description="작품 정보를 수정합니다. (관리자 전용, API Key 필요)",
+)
 def update_artwork(
     artwork_id: int,
     artwork_data: ArtworkUpdate,
@@ -156,7 +177,12 @@ def update_artwork(
     return artwork
 
 
-@router.delete("/{artwork_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{artwork_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="작품 삭제",
+    description="작품을 삭제합니다. (관리자 전용, API Key 필요)",
+)
 def delete_artwork(
     artwork_id: int,
     db: Session = Depends(get_db),
@@ -177,7 +203,12 @@ def delete_artwork(
     return None
 
 
-@router.post("/match", response_model=ArtworkMatchResponse, summary="작품 이미지 매칭")
+@router.post(
+    "/match",
+    response_model=ArtworkMatchResponse,
+    summary="작품 이미지 매칭",
+    description="업로드된 이미지와 유사한 작품을 찾습니다. Lambda를 통해 이미지 매칭 수행.",
+)
 async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_db)):
     """
     업로드된 이미지와 유사한 작품을 찾는다.

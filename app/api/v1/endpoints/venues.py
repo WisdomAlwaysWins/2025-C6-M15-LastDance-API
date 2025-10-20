@@ -12,7 +12,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 router = APIRouter(prefix="/venues", tags=["Venues"])
 
 
-@router.get("", response_model=List[VenueResponse])
+@router.get(
+    "",
+    response_model=List[VenueResponse],
+    summary="전시 장소 목록 조회",
+    description="전시 장소 목록을 조회합니다.",
+)
 def get_venues(db: Session = Depends(get_db)):
     """
     전시 장소 전체 조회
@@ -20,11 +25,16 @@ def get_venues(db: Session = Depends(get_db)):
     Returns:
         List[VenueResponse]: 전시 장소 목록
     """
-    venues = db.query(Venue).order_by(Venue.name).all()
+    venues = db.query(Venue).order_by(Venue.id).all()
     return venues
 
 
-@router.get("/{venue_id}", response_model=VenueResponse)
+@router.get(
+    "/{venue_id}",
+    response_model=VenueResponse,
+    summary="전시 장소 조회",
+    description="전시 장소 ID로 정보를 조회합니다.",
+)
 def get_venue(venue_id: int, db: Session = Depends(get_db)):
     """
     전시 장소 상세 조회
@@ -47,7 +57,13 @@ def get_venue(venue_id: int, db: Session = Depends(get_db)):
     return venue
 
 
-@router.post("", response_model=VenueResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=VenueResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="전시 장소 생성",
+    description="새 전시 장소를 등록합니다. (관리자 전용, API Key 필요)",
+)
 def create_venue(
     venue_data: VenueCreate,
     db: Session = Depends(get_db),
@@ -69,7 +85,12 @@ def create_venue(
     return new_venue
 
 
-@router.put("/{venue_id}", response_model=VenueResponse)
+@router.put(
+    "/{venue_id}",
+    response_model=VenueResponse,
+    summary="전시 장소 수정",
+    description="전시 장소 정보를 수정합니다. (관리자 전용, API Key 필요)",
+)
 def update_venue(
     venue_id: int,
     venue_data: VenueUpdate,
@@ -105,7 +126,12 @@ def update_venue(
     return venue
 
 
-@router.delete("/{venue_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{venue_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="전시 장소 삭제",
+    description="전시 장소를 삭제합니다. (관리자 전용, API Key 필요)",
+)
 def delete_venue(
     venue_id: int, db: Session = Depends(get_db), _: bool = Depends(verify_api_key)
 ):

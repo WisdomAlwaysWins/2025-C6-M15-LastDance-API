@@ -13,9 +13,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 router = APIRouter(prefix="/tags", tags=["Tags"])
 
 
-@router.get("", response_model=List[TagResponse])
+@router.get(
+    "",
+    response_model=List[TagResponse],
+    summary="태그 목록 조회",
+    description="태그 목록을 조회합니다. category_id로 필터링 가능합니다.",
+)
 def get_tags(
-    category_id: Optional[int] = Query(None, description="카테고리 ID로 필터링"),
+    category_id: Optional[int] = Query(None, description="태그 카테고리 ID로 필터링"),
     db: Session = Depends(get_db),
 ):
     """
@@ -43,11 +48,16 @@ def get_tags(
     if category_id:
         query = query.filter(Tag.category_id == category_id)
 
-    tags = query.order_by(Tag.name).all()
+    tags = query.order_by(Tag.id).all()
     return tags
 
 
-@router.get("/{tag_id}", response_model=TagDetail)
+@router.get(
+    "/{tag_id}",
+    response_model=TagDetail,
+    summary="태그 상세 조회",
+    description="태그 ID로 상세 정보를 조회합니다. 카테고리 정보 포함.",
+)
 def get_tag(tag_id: int, db: Session = Depends(get_db)):
     """
     태그 상세 조회 (카테고리 정보 포함)
@@ -61,7 +71,13 @@ def get_tag(tag_id: int, db: Session = Depends(get_db)):
     return tag
 
 
-@router.post("", response_model=TagDetail, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=TagDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="태그 생성",
+    description="새 태그를 생성합니다. (관리자 전용, API Key 필요)",
+)
 def create_tag(
     tag_data: TagCreate,
     db: Session = Depends(get_db),
@@ -102,7 +118,12 @@ def create_tag(
     return new_tag
 
 
-@router.put("/{tag_id}", response_model=TagDetail)
+@router.put(
+    "/{tag_id}",
+    response_model=TagDetail,
+    summary="태그 수정",
+    description="태그 정보를 수정합니다. (관리자 전용, API Key 필요)",
+)
 def update_tag(
     tag_id: int,
     tag_data: TagUpdate,
@@ -153,7 +174,12 @@ def update_tag(
     return tag
 
 
-@router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{tag_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="태그 삭제",
+    description="태그를 삭제합니다. (관리자 전용, API Key 필요)",
+)
 def delete_tag(
     tag_id: int,
     db: Session = Depends(get_db),

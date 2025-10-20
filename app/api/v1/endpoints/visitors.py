@@ -11,7 +11,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 router = APIRouter(prefix="/visitors", tags=["Visitors"])
 
 
-@router.get("", response_model=List[VisitorResponse])
+@router.get(
+    "",
+    response_model=List[VisitorResponse],
+    summary="관람객 목록 조회",
+    description="관람객 목록을 조회합니다.",
+)
 def get_visitors(db: Session = Depends(get_db)):
     """
     관람객 전체 조회 (관리자)
@@ -19,11 +24,16 @@ def get_visitors(db: Session = Depends(get_db)):
     Returns:
         List[VisitorResponse]: 관람객 목록
     """
-    visitors = db.query(Visitor).order_by(Visitor.created_at.desc()).all()
+    visitors = db.query(Visitor).order_by(Visitor.id).all()
     return visitors
 
 
-@router.get("/{visitor_id}", response_model=VisitorResponse)
+@router.get(
+    "/{visitor_id}",
+    response_model=VisitorResponse,
+    summary="관람객 상세 조회",
+    description="관람객 ID로 상세 정보를 조회합니다.",
+)
 def get_visitor(visitor_id: int, db: Session = Depends(get_db)):
     """
     관람객 상세 조회
@@ -46,7 +56,12 @@ def get_visitor(visitor_id: int, db: Session = Depends(get_db)):
     return visitor
 
 
-@router.get("/uuid/{uuid}", response_model=VisitorResponse)
+@router.get(
+    "/uuid/{uuid}", 
+    response_model=VisitorResponse,
+    summary="UUID로 관람객 조회",
+    description="iOS UUID로 관람객 정보를 조회합니다.",
+)
 def get_visitor_by_uuid(uuid: str, db: Session = Depends(get_db)):
     """
     관람객 UUID로 조회
@@ -69,7 +84,13 @@ def get_visitor_by_uuid(uuid: str, db: Session = Depends(get_db)):
     return visitor
 
 
-@router.post("", response_model=VisitorResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=VisitorResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="관람객 생성",
+    description="새 관람객을 생성합니다. UUID 중복 불가.",
+)
 def create_visitor(visitor_data: VisitorCreate, db: Session = Depends(get_db)):
     """
     관람객 생성
@@ -98,7 +119,12 @@ def create_visitor(visitor_data: VisitorCreate, db: Session = Depends(get_db)):
     return new_visitor
 
 
-@router.put("/{visitor_id}", response_model=VisitorResponse)
+@router.put(
+    "/{visitor_id}",
+    response_model=VisitorResponse,
+    summary="관람객 정보 수정",
+    description="관람객 이름을 수정합니다.",
+)
 def update_visitor(
     visitor_id: int, visitor_data: VisitorUpdate, db: Session = Depends(get_db)
 ):
@@ -131,7 +157,12 @@ def update_visitor(
     return visitor
 
 
-@router.delete("/{visitor_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{visitor_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="관람객 삭제",
+    description="관람객을 삭제합니다.",
+)
 def delete_visitor(visitor_id: int, db: Session = Depends(get_db)):
     """
     관람객 삭제 (관리자)
