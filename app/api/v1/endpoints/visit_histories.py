@@ -34,7 +34,7 @@ def create_visit_history(visit_data: VisitHistoryCreate, db: Session = Depends(g
     if not visitor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Visitor with id {visit_data.visitor_id} not found",
+            detail=f"관람객 ID {visit_data.visitor_id}를 찾을 수 없습니다",
         )
 
     # Exhibition 존재 여부 확인
@@ -44,7 +44,7 @@ def create_visit_history(visit_data: VisitHistoryCreate, db: Session = Depends(g
     if not exhibition:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Exhibition with id {visit_data.exhibition_id} not found",
+            detail=f"전시 ID {visit_data.exhibition_id}를 찾을 수 없습니다",
         )
 
     # VisitHistory 생성
@@ -99,6 +99,6 @@ def get_visit_history(visit_id: int, db: Session = Depends(get_db)):
     if not visit:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"VisitHistory with id {visit_id} not found",
+            detail=f"방문 기록 ID {visit_id}를 찾을 수 없습니다",
         )
     return visit

@@ -46,7 +46,7 @@ def get_tag_category(category_id: int, db: Session = Depends(get_db)):
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"TagCategory with id {category_id} not found",
+            detail=f"태그 카테고리 ID {category_id}를 찾을 수 없습니다",
         )
     return category
 
@@ -76,7 +76,7 @@ def create_tag_category(
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"TagCategory with name '{category_data.name}' already exists",
+            detail=f"'{category_data.name}' 이름의 태그 카테고리가 이미 존재합니다",
         )
 
     # 생성
@@ -109,7 +109,7 @@ def update_tag_category(
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"TagCategory with id {category_id} not found",
+            detail=f"태그 카테고리 ID {category_id}를 찾을 수 없습니다",
         )
 
     # 이름 중복 체크
@@ -124,7 +124,7 @@ def update_tag_category(
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"TagCategory with name '{category_data.name}' already exists",
+                detail=f"'{category_data.name}' 이름의 태그 카테고리가 이미 존재합니다",
             )
 
     # 수정
@@ -152,7 +152,7 @@ def delete_tag_category(category_id: int, db: Session = Depends(get_db)):
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"TagCategory with id {category_id} not found",
+            detail=f"태그 카테고리 ID {category_id}를 찾을 수 없습니다",
         )
 
     db.delete(category)

@@ -41,7 +41,7 @@ def get_venue(venue_id: int, db: Session = Depends(get_db)):
     if not venue:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Venue with id {venue_id} not found",
+            detail=f"전시 장소 ID {venue_id}를 찾을 수 없습니다",
         )
     return venue
 
@@ -83,7 +83,7 @@ def update_venue(venue_id: int, venue_data: VenueUpdate, db: Session = Depends(g
     if not venue:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Venue with id {venue_id} not found",
+            detail=f"전시 장소 ID {venue_id}를 찾을 수 없습니다",
         )
 
     update_data = venue_data.model_dump(exclude_unset=True)
@@ -110,7 +110,7 @@ def delete_venue(venue_id: int, db: Session = Depends(get_db)):
     if not venue:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Venue with id {venue_id} not found",
+            detail=f"전시 장소 ID {venue_id}를 찾을 수 없습니다",
         )
 
     db.delete(venue)

@@ -49,7 +49,7 @@ def get_artworks(
         if not artist:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Artist with id {artist_id} not found",
+                detail=f"작가 ID {artist_id}를 찾을 수 없습니다",
             )
 
     # Exhibition 존재 여부 확인
@@ -58,7 +58,7 @@ def get_artworks(
         if not exhibition:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Exhibition with id {exhibition_id} not found",
+                detail=f"전시 ID {exhibition_id}를 찾을 수 없습니다",
             )
 
     query = db.query(Artwork)
@@ -82,7 +82,7 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
     if not artwork:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artwork with id {artwork_id} not found",
+            detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
         )
     return artwork
 
@@ -103,7 +103,7 @@ def create_artwork(artwork_data: ArtworkCreate, db: Session = Depends(get_db)):
     if not artist:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artist with id {artwork_data.artist_id} not found",
+            detail=f"작가 ID {artwork_data.artist_id}를 찾을 수 없습니다",
         )
 
     new_artwork = Artwork(**artwork_data.model_dump())
@@ -127,7 +127,7 @@ def update_artwork(
     if not artwork:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artwork with id {artwork_id} not found",
+            detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
         )
 
     # Artist 존재 여부 확인
@@ -136,7 +136,7 @@ def update_artwork(
         if not artist:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Artist with id {artwork_data.artist_id} not found",
+                detail=f"작가 ID {artwork_data.artist_id}를 찾을 수 없습니다",
             )
 
     update_data = artwork_data.model_dump(exclude_unset=True)
@@ -157,7 +157,7 @@ def delete_artwork(artwork_id: int, db: Session = Depends(get_db)):
     if not artwork:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artwork with id {artwork_id} not found",
+            detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
         )
 
     db.delete(artwork)

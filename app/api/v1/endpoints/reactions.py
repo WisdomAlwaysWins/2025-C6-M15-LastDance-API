@@ -83,7 +83,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     if not reaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Reaction with id {reaction_id} not found",
+            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
     return reaction
 
@@ -125,7 +125,7 @@ async def create_reaction(
     if not artwork:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artwork with id {artwork_id} not found",
+            detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
         )
 
     # Visitor 존재 여부 확인
@@ -135,7 +135,7 @@ async def create_reaction(
     if not visitor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Visitor with id {visitor_id} not found",
+            detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
         )
 
     # Visit 존재 여부 확인 (선택)
@@ -144,15 +144,15 @@ async def create_reaction(
         if not visit:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"VisitHistory with id {visit_id} not found",
+                detail=f"방문 기록 ID {visit_id}를 찾을 수 없습니다",
             )
 
     # S3에 이미지 업로드
     try:
         image_url = await s3_client.upload_file(file=image, folder="reactions")
-        logger.info(f"✅ S3 업로드 성공: {image_url}")
+        logger.info(f"S3 업로드 성공: {image_url}")
     except Exception as e:
-        logger.error(f"❌ S3 업로드 실패: {e}")
+        logger.error(f"S3 업로드 실패: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"이미지 업로드 실패: {str(e)}",
@@ -182,7 +182,7 @@ async def create_reaction(
             if missing_ids:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Tags with ids {sorted(missing_ids)} not found",
+                    detail=f"태그 ID {sorted(missing_ids)}를 찾을 수 없습니다",
                 )
 
             new_reaction.tags.extend(tags)
@@ -191,7 +191,7 @@ async def create_reaction(
         except json.JSONDecodeError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="tag_ids must be a valid JSON array string",
+                detail="tag_ids는 유효한 JSON 배열 문자열이어야 합니다",
             )
 
     return new_reaction
@@ -219,7 +219,7 @@ def update_reaction(
     if not reaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Reaction with id {reaction_id} not found",
+            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
 
     # comment 수정
@@ -241,7 +241,7 @@ def update_reaction(
                 missing_ids = set(reaction_data.tag_ids) - found_ids
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Tags with ids {missing_ids} not found",
+                    detail=f"태그 ID {missing_ids}를 찾을 수 없습니다",
                 )
 
             reaction.tags.extend(tags)
@@ -250,7 +250,7 @@ def update_reaction(
     if not reaction.comment and not reaction.tags:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either comment or tag_ids must be provided",
+            detail="코멘트 또는 태그 중 하나는 필수입니다",
         )
 
     db.commit()
@@ -258,24 +258,24 @@ def update_reaction(
     return reaction
 
 
-@router.delete("/{reaction_id}", status_code=204)
+@router.delete("/{reaction_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
     반응 삭제 (촬영한 이미지도 함께 삭제)
     """
     reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
     if not reaction:
-        raise HTTPException(status_code=404, detail="반응을 찾을 수 없습니다")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="반응을 찾을 수 없습니다")
 
     # S3에서 이미지 삭제 (있는 경우)
     if reaction.image_url:
         try:
             s3_client.delete_file(str(reaction.image_url))
         except Exception as e:
-            logger.warning(f"⚠️ S3 이미지 삭제 실패 (계속 진행): {e}")
+            logger.warning(f"S3 이미지 삭제 실패 (계속 진행): {e}")
 
     # DB에서 반응 삭제
     db.delete(reaction)
     db.commit()
 
-    return Response(status_code=204)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -44,7 +44,7 @@ def get_exhibitions(
         if not venue:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Venue with id {venue_id} not found",
+                detail=f"전시 장소 ID {venue_id}를 찾을 수 없습니다",
             )
 
     query = db.query(Exhibition)
@@ -75,7 +75,7 @@ def get_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
     if not exhibition:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Exhibition with id {exhibition_id} not found",
+            detail=f"전시 ID를 {exhibition_id}를 찾을 수 없습니다",
         )
     return exhibition
 
@@ -96,7 +96,7 @@ def create_exhibition(exhibition_data: ExhibitionCreate, db: Session = Depends(g
     if exhibition_data.start_date > exhibition_data.end_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="start_date must be before end_date",
+            detail="시작 날짜는 종료 날짜보다 이전이어야 합니다",
         )
 
     # Venue 존재 여부 확인
@@ -104,7 +104,7 @@ def create_exhibition(exhibition_data: ExhibitionCreate, db: Session = Depends(g
     if not venue:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Venue with id {exhibition_data.venue_id} not found",
+            detail=f"전시 장소 ID {exhibition_data.venue_id}를 찾을 수 없습니다",
         )
 
     # Exhibition 생성
@@ -127,7 +127,7 @@ def create_exhibition(exhibition_data: ExhibitionCreate, db: Session = Depends(g
             db.commit()
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Artworks with ids {sorted(missing_ids)} not found",
+                detail=f"작품 ID {sorted(missing_ids)}를 찾을 수 없습니다",
             )
 
         new_exhibition.artworks.extend(artworks)
@@ -151,7 +151,7 @@ def update_exhibition(
     if not exhibition:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Exhibition with id {exhibition_id} not found",
+            detail=f"전시 ID를 {exhibition_id}를 찾을 수 없습니다",
         )
 
     # 날짜 검증
@@ -160,7 +160,7 @@ def update_exhibition(
     if start > end:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="start_date must be before end_date",
+            detail="시작 날짜는 종료 날짜보다 이전이어야 합니다",
         )
 
     # Venue 존재 여부 확인
@@ -169,7 +169,7 @@ def update_exhibition(
         if not venue:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Venue with id {exhibition_data.venue_id} not found",
+                detail=f"전시 장소 ID {exhibition_data.venue_id}를 찾을 수 없습니다",
             )
 
     # 기본 필드 수정
@@ -190,7 +190,7 @@ def update_exhibition(
         if missing_ids:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Artworks with ids {sorted(missing_ids)} not found",
+                detail=f"작품 ID {sorted(missing_ids)}를 찾을 수 없습니다",
             )
 
         exhibition.artworks.clear()
@@ -210,7 +210,7 @@ def delete_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
     if not exhibition:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Exhibition with id {exhibition_id} not found",
+            detail=f"전시 ID를 {exhibition_id}를 찾을 수 없습니다",
         )
 
     db.delete(exhibition)

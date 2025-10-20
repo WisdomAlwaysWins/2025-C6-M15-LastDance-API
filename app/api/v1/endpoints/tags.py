@@ -35,7 +35,7 @@ def get_tags(
         if not category:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"TagCategory with id {category_id} not found",
+                detail=f"태그 카테고리 ID {category_id}를 찾을 수 없습니다",
             )
 
     query = db.query(Tag)
@@ -55,7 +55,7 @@ def get_tag(tag_id: int, db: Session = Depends(get_db)):
     if not tag:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Tag with id {tag_id} not found",
+            detail=f"태그 ID {tag_id}를 찾을 수 없습니다",
         )
     return tag
 
@@ -79,7 +79,7 @@ def create_tag(tag_data: TagCreate, db: Session = Depends(get_db)):
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"TagCategory with id {tag_data.category_id} not found",
+            detail=f"태그 카테고리 ID {tag_data.category_id}를 찾을 수 없습니다",
         )
 
     # 중복 체크
@@ -87,7 +87,7 @@ def create_tag(tag_data: TagCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Tag with name '{tag_data.name}' already exists",
+            detail=f"'{tag_data.name}' 이름의 태그가 이미 존재합니다",
         )
 
     new_tag = Tag(**tag_data.model_dump())
@@ -109,7 +109,7 @@ def update_tag(tag_id: int, tag_data: TagUpdate, db: Session = Depends(get_db)):
     if not tag:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Tag with id {tag_id} not found",
+            detail=f"태그 ID {tag_id}를 찾을 수 없습니다",
         )
 
     # Category 존재 여부 확인
@@ -120,7 +120,7 @@ def update_tag(tag_id: int, tag_data: TagUpdate, db: Session = Depends(get_db)):
         if not category:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"TagCategory with id {tag_data.category_id} not found",
+                detail=f"태그 카테고리 ID {tag_data.category_id}를 찾을 수 없습니다",
             )
 
     # 이름 중복 체크
@@ -131,7 +131,7 @@ def update_tag(tag_id: int, tag_data: TagUpdate, db: Session = Depends(get_db)):
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Tag with name '{tag_data.name}' already exists",
+                detail=f"'{tag_data.name}' 이름의 태그가 이미 존재합니다",
             )
 
     update_data = tag_data.model_dump(exclude_unset=True)
@@ -152,7 +152,7 @@ def delete_tag(tag_id: int, db: Session = Depends(get_db)):
     if not tag:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Tag with id {tag_id} not found",
+            detail=f"Tag with id {tag_id}를 찾을 수 없습니다",
         )
 
     db.delete(tag)

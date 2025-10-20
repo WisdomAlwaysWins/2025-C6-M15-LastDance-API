@@ -41,7 +41,7 @@ def get_visitor(visitor_id: int, db: Session = Depends(get_db)):
     if not visitor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Visitor with id {visitor_id} not found",
+            detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
         )
     return visitor
 
@@ -64,7 +64,7 @@ def get_visitor_by_uuid(uuid: str, db: Session = Depends(get_db)):
     if not visitor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Visitor with uuid {uuid} not found",
+            detail=f"관람객 UUID {uuid}를 찾을 수 없습니다",
         )
     return visitor
 
@@ -88,7 +88,7 @@ def create_visitor(visitor_data: VisitorCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Visitor with uuid '{visitor_data.uuid}' already exists",
+            detail=f"관람객 UUID '{visitor_data.uuid}'이(가) 이미 존재합니다",
         )
 
     new_visitor = Visitor(**visitor_data.model_dump())
@@ -119,7 +119,7 @@ def update_visitor(
     if not visitor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Visitor with id {visitor_id} not found",
+            detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
         )
 
     update_data = visitor_data.model_dump(exclude_unset=True)
@@ -146,7 +146,7 @@ def delete_visitor(visitor_id: int, db: Session = Depends(get_db)):
     if not visitor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Visitor with id {visitor_id} not found",
+            detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
         )
 
     db.delete(visitor)

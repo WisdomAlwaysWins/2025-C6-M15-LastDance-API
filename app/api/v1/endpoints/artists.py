@@ -138,7 +138,7 @@ def delete_artist(artist_id: int, db: Session = Depends(get_db)):
     if not artist:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Artist with id {artist_id} not found",
+            detail=f"작가 ID {artist_id}를 찾을 수 없습니다",
         )
 
     db.delete(artist)
