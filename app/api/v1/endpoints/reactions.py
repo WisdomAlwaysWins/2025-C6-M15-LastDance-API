@@ -224,7 +224,7 @@ def update_reaction(
 
     # comment 수정
     if reaction_data.comment is not None:
-        reaction.comment = reaction_data.comment
+        reaction.comment = reaction_data.comment  # type: ignore
 
     # tag_ids 수정
     if reaction_data.tag_ids is not None:
@@ -270,7 +270,7 @@ async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     # S3에서 이미지 삭제 (있는 경우)
     if reaction.image_url:
         try:
-            s3_client.delete_file(reaction.image_url)
+            s3_client.delete_file(str(reaction.image_url))
         except Exception as e:
             logger.warning(f"⚠️ S3 이미지 삭제 실패 (계속 진행): {e}")
 

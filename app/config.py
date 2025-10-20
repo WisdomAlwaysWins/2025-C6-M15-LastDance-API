@@ -26,8 +26,6 @@ class Settings(BaseSettings):
     # HuggingFace
     HUGGINGFACE_TOKEN: str
 
-    HUGGINGFACE_TOKEN: str
-
     # Lambda
     LAMBDA_FUNCTION_NAME: str = "lastdance-embedding-generator"
 
@@ -40,8 +38,7 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    """설정 싱글톤 인스턴스 반환 (캐싱)"""
-    return Settings()
+    return Settings()  # type: ignore
 
 
 # 전역 설정 객체

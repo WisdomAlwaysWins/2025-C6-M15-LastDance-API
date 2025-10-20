@@ -26,7 +26,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # 요청 정보 로깅
         logger.info(
             f"[{request_time}] 요청 시작 - {request.method} {request.url.path} "
-            f"- IP: {request.client.host}"
+            f"- IP: {request.client.host if request.client else 'unknown'}"
         )
         
         try:

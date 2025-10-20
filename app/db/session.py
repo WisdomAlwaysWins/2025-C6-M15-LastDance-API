@@ -12,7 +12,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # SQLAlchemy 엔진 생성
-engine = create_engine(DATABASE_URL)
+engine = create_engine(str(DATABASE_URL))
 
 # 세션 팩토리 생성
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -1,11 +1,9 @@
-import io
 import logging
 
-from PIL import Image
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 from app.schemas.upload import DeleteImageResponse, UploadResponse
 from app.utils.s3_client import s3_client
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/upload", tags=["Upload"])
@@ -70,28 +68,12 @@ async def upload_image(
     """일반 이미지 업로드"""
     try:
         # 파일 검증
-        extension = validate_image(file)
-
-        # 파일 읽기
-        file_content = await file.read()
-
-        # 이미지 유효성 검증 (PIL로 열어보기)
-        try:
-            Image.open(io.BytesIO(file_content))
-        except Exception:
-            raise HTTPException(
-                status_code=400, detail="유효하지 않은 이미지 파일입니다"
-            )
+        validate_image(file)
 
         # S3 업로드
-        file_url = s3_client.upload_file(
-            file_content=file_content, file_extension=extension, folder=folder
-        )
+        file_url = await s3_client.upload_file(file=file, folder=folder)
 
-        if not file_url:
-            raise HTTPException(status_code=500, detail="파일 업로드에 실패했습니다")
-
-        return UploadResponse(url=file_url, filename=file.filename)
+        return UploadResponse(url=file_url, filename=file.filename or "unknown")
 
     except HTTPException:
         raise
@@ -117,26 +99,13 @@ async def upload_exhibition_poster(
 ):
     """전시 포스터 업로드 (exhibitions 폴더)"""
     try:
-        extension = validate_image(file)
-        file_content = await file.read()
+        # 파일 검증
+        validate_image(file)
 
-        # 이미지 검증
-        try:
-            Image.open(io.BytesIO(file_content))
-        except Exception:
-            raise HTTPException(
-                status_code=400, detail="유효하지 않은 이미지 파일입니다"
-            )
+        # S3 업로드
+        file_url = await s3_client.upload_file(file=file, folder="exhibitions")
 
-        # exhibitions 폴더에 업로드
-        file_url = s3_client.upload_file(
-            file_content=file_content, file_extension=extension, folder="exhibitions"
-        )
-
-        if not file_url:
-            raise HTTPException(status_code=500, detail="파일 업로드에 실패했습니다")
-
-        return UploadResponse(url=file_url, filename=file.filename)
+        return UploadResponse(url=file_url, filename=file.filename or "unknown")
 
     except HTTPException:
         raise
@@ -162,26 +131,13 @@ async def upload_artwork_thumbnail(
 ):
     """작품 썸네일 업로드 (artworks 폴더)"""
     try:
-        extension = validate_image(file)
-        file_content = await file.read()
+        # 파일 검증
+        validate_image(file)
 
-        # 이미지 검증
-        try:
-            Image.open(io.BytesIO(file_content))
-        except Exception:
-            raise HTTPException(
-                status_code=400, detail="유효하지 않은 이미지 파일입니다"
-            )
+        # S3 업로드
+        file_url = await s3_client.upload_file(file=file, folder="artworks")
 
-        # artworks 폴더에 업로드
-        file_url = s3_client.upload_file(
-            file_content=file_content, file_extension=extension, folder="artworks"
-        )
-
-        if not file_url:
-            raise HTTPException(status_code=500, detail="파일 업로드에 실패했습니다")
-
-        return UploadResponse(url=file_url, filename=file.filename)
+        return UploadResponse(url=file_url, filename=file.filename or "unknown")
 
     except HTTPException:
         raise
@@ -207,26 +163,13 @@ async def upload_reaction_image(
 ):
     """반응 이미지 업로드 (reactions 폴더)"""
     try:
-        extension = validate_image(file)
-        file_content = await file.read()
+        # 파일 검증
+        validate_image(file)
 
-        # 이미지 검증
-        try:
-            Image.open(io.BytesIO(file_content))
-        except Exception:
-            raise HTTPException(
-                status_code=400, detail="유효하지 않은 이미지 파일입니다"
-            )
+        # S3 업로드
+        file_url = await s3_client.upload_file(file=file, folder="reactions")
 
-        # reactions 폴더에 업로드
-        file_url = s3_client.upload_file(
-            file_content=file_content, file_extension=extension, folder="reactions"
-        )
-
-        if not file_url:
-            raise HTTPException(status_code=500, detail="파일 업로드에 실패했습니다")
-
-        return UploadResponse(url=file_url, filename=file.filename)
+        return UploadResponse(url=file_url, filename=file.filename or "unknown")
 
     except HTTPException:
         raise

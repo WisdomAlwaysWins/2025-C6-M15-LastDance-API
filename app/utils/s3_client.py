@@ -1,14 +1,14 @@
 import logging
 import os
 import time
-from typing import Optional
 import uuid
+from typing import Optional
 
 import boto3
 from botocore.exceptions import ClientError
+from fastapi import UploadFile
 
 from app.config import settings
-from fastapi import UploadFile
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +29,8 @@ class S3Client:
         self,
         file: UploadFile,
         folder: str,
-        exhibition_id: int = None,
-        visitor_id: int = None,
+        exhibition_id: Optional[int] = None,
+        visitor_id: Optional[int] = None,
     ) -> str:
         """
         S3에 파일 업로드
@@ -49,7 +49,7 @@ class S3Client:
             contents = await file.read()
 
             # 환경 (production or test)
-            env = os.getenv("ENVIRONMENT", "production")
+            env = settings.ENVIRONMENT
 
             # 파일명 생성
             timestamp = int(time.time())
@@ -75,11 +75,11 @@ class S3Client:
             # URL 생성
             file_url = f"https://{settings.S3_BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
 
-            logger.info(f"✅ S3 업로드 성공: {s3_key}")
+            logger.info(f"S3 업로드 성공: {s3_key}")
             return file_url
 
         except Exception as e:
-            logger.error(f"❌ S3 업로드 실패: {e}")
+            logger.error(f"S3 업로드 실패: {e}")
             raise
 
     def delete_file(self, file_url: str) -> bool:
