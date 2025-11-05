@@ -1,9 +1,8 @@
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
-if TYPE_CHECKING:
-    from app.schemas.tag_category import TagCategoryResponse
+from app.schemas.tag_category import TagCategoryBase
 
 
 class TagCreate(BaseModel):
@@ -15,7 +14,6 @@ class TagCreate(BaseModel):
         category_id: 소속 카테고리 ID
         color_hex: 색상 코드 (선택, #RRGGBB 형식)
     """
-
     name: str = Field(..., description="태그명")
     category_id: int = Field(..., description="카테고리 ID")
     color_hex: Optional[str] = Field(
@@ -32,7 +30,6 @@ class TagUpdate(BaseModel):
         category_id: 카테고리 ID (선택)
         color_hex: 색상 코드 (선택)
     """
-
     name: Optional[str] = None
     category_id: Optional[int] = None
     color_hex: Optional[str] = Field(None, pattern="^#[0-9A-Fa-f]{6}$")
@@ -45,13 +42,12 @@ class TagResponse(BaseModel):
     Attributes:
         id: 태그 ID
         name: 태그명
-        category_id: 소속 카테고리 ID
+        category: 소속 카테고리 기본 정보
         color_hex: 색상 코드
     """
-
     id: int
     name: str
-    category_id: int
+    category: TagCategoryBase
     color_hex: Optional[str] = None
 
     class Config:
@@ -64,9 +60,8 @@ class TagDetail(TagResponse):
 
     Attributes:
         category: 소속 카테고리 정보
+    
+    Note: 부모 클래스에서 상속
     """
-
-    category: "TagCategoryResponse"
-
     class Config:
         from_attributes = True
