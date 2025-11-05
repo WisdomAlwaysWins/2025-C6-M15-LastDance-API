@@ -12,7 +12,6 @@ class VisitorCreate(BaseModel):
         uuid: iOS에서 생성한 UUID (디바이스 식별용)
         name: 관람객 이름 (선택)
     """
-
     uuid: str = Field(..., description="iOS 생성 UUID")
     name: Optional[str] = Field(None, description="관람객 이름")
 
@@ -24,7 +23,6 @@ class VisitorUpdate(BaseModel):
     Attributes:
         name: 관람객 이름
     """
-
     name: Optional[str] = None
 
 
@@ -39,7 +37,6 @@ class VisitorResponse(BaseModel):
         created_at: 생성일시
         updated_at: 수정일시
     """
-
     id: int
     uuid: str
     name: Optional[str] = None

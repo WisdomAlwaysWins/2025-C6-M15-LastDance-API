@@ -3,14 +3,14 @@ import json
 import logging
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.artwork import Artwork
 from app.models.reaction import Reaction
 from app.models.tag import Tag
 from app.models.visit_history import VisitHistory
-from app.schemas.reaction import (  # ReactionCreate,
+from app.schemas.reaction import (
     ReactionDetail,
     ReactionResponse,
     ReactionUpdate,
@@ -46,7 +46,7 @@ def get_reactions(
     db: Session = Depends(get_db),
 ):
     """
-    반응 전체 조회
+    반응 목록 조회 (가벼운 버전)
 
     Args:
         artwork_id: 작품 ID로 필터링
@@ -54,9 +54,13 @@ def get_reactions(
         visit_id: 방문 기록 ID로 필터링
 
     Returns:
-        List[ReactionResponse]: 반응 목록
+        List[ReactionResponse]: 반응 목록 (artwork_title, visitor_name 포함)
     """
-    query = db.query(Reaction)
+    query = db.query(Reaction).options(
+        joinedload(Reaction.artwork),
+        joinedload(Reaction.visitor),
+        joinedload(Reaction.tags).joinedload(Tag.category)
+    )
 
     # 필터링
     if artwork_id:
@@ -67,35 +71,97 @@ def get_reactions(
         query = query.filter(Reaction.visit_id == visit_id)
 
     reactions = query.order_by(Reaction.created_at.desc()).all()
-    return reactions
+    
+    # ReactionResponse 형식으로 변환
+    result = []
+    for reaction in reactions:
+        result.append({
+            "id": reaction.id,
+            "artwork_id": reaction.artwork_id,
+            "artwork_title": reaction.artwork.title if reaction.artwork else "",
+            "visitor_id": reaction.visitor_id,
+            "visitor_name": reaction.visitor.name if reaction.visitor else None,
+            "visit_id": reaction.visit_id,
+            "comment": reaction.comment,
+            "image_url": reaction.image_url,
+            "tags": reaction.tags,
+            "created_at": reaction.created_at,
+            "updated_at": reaction.updated_at,
+        })
+    
+    return result
 
 
 @router.get(
     "/{reaction_id}", 
     response_model=ReactionDetail,
     summary="반응 상세 조회",
-    description="반응 ID로 상세 정보를 조회합니다. 작품, 관람객, 태그 정보 포함.",
+    description="반응 ID로 상세 정보를 조회합니다. 작품, 관람객, 방문 기록, 태그 전체 정보 포함.",
 )
 def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
-    반응 상세 조회 (작품, 관람객, 태그 포함)
+    반응 상세 조회 (전체 정보)
 
     Args:
         reaction_id: 반응 ID
 
     Returns:
-        ReactionDetail: 반응 상세 정보
+        ReactionDetail: 반응 상세 정보 (artwork, visitor, visit, tags 포함)
 
     Raises:
         404: 반응을 찾을 수 없음
     """
-    reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
+    reaction = (
+        db.query(Reaction)
+        .options(
+            joinedload(Reaction.artwork).joinedload(Artwork.artist),
+            joinedload(Reaction.visitor),
+            joinedload(Reaction.visit).joinedload(VisitHistory.exhibition),
+            joinedload(Reaction.tags).joinedload(Tag.category)
+        )
+        .filter(Reaction.id == reaction_id)
+        .first()
+    )
+    
     if not reaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
-    return reaction
+    
+    # ReactionDetail 형식으로 변환
+    result = {
+        "id": reaction.id,
+        "artwork_id": reaction.artwork_id,
+        "artwork": {
+            "id": reaction.artwork.id,
+            "title": reaction.artwork.title,
+            "artist_id": reaction.artwork.artist_id,
+            "artist_name": reaction.artwork.artist.name if reaction.artwork.artist else "",
+            "description": reaction.artwork.description,
+            "year": reaction.artwork.year,
+            "thumbnail_url": reaction.artwork.thumbnail_url,
+            "reaction_count": len(reaction.artwork.reactions) if reaction.artwork else 0,
+            "created_at": reaction.artwork.created_at,
+            "updated_at": reaction.artwork.updated_at,
+        } if reaction.artwork else None,
+        "visitor_id": reaction.visitor_id,
+        "visitor": reaction.visitor,
+        "visit_id": reaction.visit_id,
+        "visit": {
+            "id": reaction.visit.id,
+            "exhibition_id": reaction.visit.exhibition_id,
+            "exhibition_title": reaction.visit.exhibition.title if reaction.visit.exhibition else "",
+            "visited_at": reaction.visit.visited_at,
+        } if reaction.visit else None,
+        "comment": reaction.comment,
+        "image_url": reaction.image_url,
+        "tags": reaction.tags,
+        "created_at": reaction.created_at,
+        "updated_at": reaction.updated_at,
+    }
+    
+    return result
 
 
 @router.post(
@@ -210,12 +276,13 @@ async def create_reaction(
                 detail="tag_ids는 유효한 JSON 배열 문자열이어야 합니다",
             )
 
-    return new_reaction
+    # 생성 후 상세 정보 조회하여 반환
+    return get_reaction(new_reaction.id, db)
 
 
 @router.put(
     "/{reaction_id}", 
-    response_model=ReactionResponse,
+    response_model=ReactionDetail,
     summary="반응 수정",
     description="반응의 코멘트 또는 태그를 수정합니다.",
 )
@@ -230,7 +297,7 @@ def update_reaction(
         reaction_data: 수정 데이터
 
     Returns:
-        ReactionResponse: 수정된 반응 정보
+        ReactionDetail: 수정된 반응 정보 (전체)
 
     Raises:
         404: 반응을 찾을 수 없음
@@ -246,6 +313,10 @@ def update_reaction(
     # comment 수정
     if reaction_data.comment is not None:
         reaction.comment = reaction_data.comment  # type: ignore
+
+    # image_url 수정
+    if reaction_data.image_url is not None:
+        reaction.image_url = reaction_data.image_url  # type: ignore
 
     # tag_ids 수정
     if reaction_data.tag_ids is not None:
@@ -276,7 +347,9 @@ def update_reaction(
 
     db.commit()
     db.refresh(reaction)
-    return reaction
+    
+    # 수정 후 상세 정보 조회하여 반환
+    return get_reaction(reaction_id, db)
 
 
 @router.delete(
@@ -288,6 +361,12 @@ def update_reaction(
 async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
     반응 삭제 (촬영한 이미지도 함께 삭제)
+    
+    Args:
+        reaction_id: 반응 ID
+        
+    Raises:
+        404: 반응을 찾을 수 없음
     """
     reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
     if not reaction:
