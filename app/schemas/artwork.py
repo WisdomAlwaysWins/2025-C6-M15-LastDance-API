@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from app.schemas.artist import ArtistResponse
-    from app.schemas.exhibition import ExhibitionSummary
 
+from app.schemas.exhibition import ExhibitionSummary
 
 class ArtworkCreate(BaseModel):
     """
@@ -114,15 +114,16 @@ class ArtworkDetail(BaseModel):
 
 class ArtworkMatchRequest(BaseModel):
     """
-    작품 매칭 요청
+    작품 매칭 요청 (전체 작품 대상)
 
     Attributes:
         image_base64: Base64 인코딩된 이미지
-        exhibition_id: 전시 ID
-        threshold: 유사도 임계값 (0.0 ~ 1.0)
+        threshold: 유사도 임계값 (0.0 ~ 1.0, 기본값 0.7)
+        
+    Note:
+        전시 필터링 없이 전체 작품에서 매칭합니다.
     """
     image_base64: str = Field(..., description="Base64 인코딩된 이미지")
-    exhibition_id: int = Field(..., description="전시 ID")
     threshold: float = Field(0.7, ge=0.0, le=1.0, description="유사도 임계값")
 
 
@@ -136,7 +137,8 @@ class ArtworkMatchResult(BaseModel):
         artist_id: 작가 ID
         artist_name: 작가 이름
         thumbnail_url: 썸네일 URL
-        similarity: 유사도 점수
+        similarity: 유사도 점수 (0.0 ~ 1.0)
+        exhibitions: 해당 작품이 전시된 전시 목록
     """
     artwork_id: int
     title: str
@@ -144,6 +146,7 @@ class ArtworkMatchResult(BaseModel):
     artist_name: str
     thumbnail_url: Optional[str]
     similarity: float
+    exhibitions: List["ExhibitionSummary"] = []
 
     class Config:
         from_attributes = True
@@ -157,7 +160,7 @@ class ArtworkMatchResponse(BaseModel):
         matched: 매칭 성공 여부
         total_matches: 전체 매칭된 작품 수
         threshold: 사용된 임계값
-        results: 매칭 결과 목록
+        results: 매칭 결과 목록 (유사도 높은 순)
     """
     matched: bool
     total_matches: int
