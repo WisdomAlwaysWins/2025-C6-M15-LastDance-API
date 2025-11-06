@@ -1,6 +1,9 @@
 # app/api/v1/endpoints/artworks.py
 import logging
 from typing import List, Optional
+from PIL import Image
+import base64
+import io
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
@@ -298,74 +301,154 @@ def delete_artwork(
     return None
 
 
+def resize_base64_image(base64_string: str, max_size: int = 1024) -> str:
+    """
+    base64 이미지를 리사이즈하여 크기 줄이기
+    
+    Args:
+        base64_string: base64 인코딩된 이미지
+        max_size: 최대 가로/세로 크기 (px)
+        
+    Returns:
+        str: 리사이즈된 base64 이미지
+    """
+    try:
+        # base64 → 이미지
+        image_data = base64.b64decode(base64_string)
+        image = Image.open(io.BytesIO(image_data))
+        
+        # RGB로 변환 (RGBA면)
+        if image.mode in ("RGBA", "LA", "P"):
+            image = image.convert("RGB")
+        
+        # 리사이즈 (비율 유지)
+        image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+        
+        # 이미지 → base64
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=85, optimize=True)
+        resized_base64 = base64.b64encode(buffer.getvalue()).decode()
+        
+        return resized_base64
+        
+    except Exception as e:
+        logger.error(f"이미지 리사이즈 오류: {e}")
+        raise
+
+
 @router.post(
     "/match",
     response_model=ArtworkMatchResponse,
     summary="작품 이미지 매칭",
-    description="업로드된 이미지와 유사한 작품을 찾습니다. Lambda를 통해 이미지 매칭 수행.",
+    description="업로드된 이미지와 유사한 작품을 전체 작품에서 찾습니다. Lambda를 통해 이미지 매칭 수행.",
 )
 async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_db)):
-    """
-    업로드된 이미지와 유사한 작품을 찾는다.
-
-    Args:
-        request: 이미지 매칭 요청 (image_base64, exhibition_id, threshold)
-        
-    Returns:
-        ArtworkMatchResponse: 매칭 결과 (matched, results 포함)
-        
-    Raises:
-        404: 전시를 찾을 수 없거나 작품이 없음
-        500: 이미지 매칭 오류
-    """
     try:
-        # 1. 전시 조회
-        exhibition = (
-            db.query(Exhibition)
-            .options(
-                joinedload(Exhibition.artworks).joinedload(Artwork.artist)
-            )
-            .filter(Exhibition.id == request.exhibition_id)
-            .first()
+        # 0. 이미지 리사이즈 (크기 줄이기)
+        logger.info("업로드 이미지 리사이즈 시작")
+        resized_image = resize_base64_image(
+            request.image_base64, 
+            max_size=1024  # 1024x1024 이하로
         )
-
-        if not exhibition:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"전시 ID {request.exhibition_id}를 찾을 수 없습니다",
+        original_size = len(request.image_base64) / 1024 / 1024
+        resized_size = len(resized_image) / 1024 / 1024
+        logger.info(f"이미지 크기: {original_size:.2f}MB → {resized_size:.2f}MB")
+        
+        # 1. 전체 작품 조회
+        artworks = (
+            db.query(Artwork)
+            .options(
+                joinedload(Artwork.artist),
+                joinedload(Artwork.exhibitions).joinedload(Exhibition.venue)
             )
-
-        # 2. 해당 전시의 작품들 조회
-        artworks = exhibition.artworks
+            .all()
+        )
 
         if not artworks:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"전시 ID {request.exhibition_id}에 작품이 없습니다",
+                detail="등록된 작품이 없습니다",
             )
 
-        # 3. Lambda에 전달할 작품 정보 구성
-        artwork_list = [
-            {
-                "id": artwork.id,
-                "title": artwork.title,
-                "artist_id": artwork.artist_id,
-                "artist_name": artwork.artist.name if artwork.artist else "",
-                "thumbnail_url": artwork.thumbnail_url,
-            }
-            for artwork in artworks
-        ]
+        logger.info(f"전체 작품 {len(artworks)}개와 매칭 시작")
 
-        logger.info(f"전시 {request.exhibition_id}의 작품 {len(artwork_list)}개와 매칭")
-
-        # 4. Lambda 호출
-        result = lambda_client.invoke_image_matching(
-            image_base64=request.image_base64,
-            artworks=artwork_list,
-            threshold=request.threshold,
-        )
-
-        return result
+        # 2. 배치 처리
+        BATCH_SIZE = 50  # 이미지 작아졌으니 배치 크기 증가
+        all_results = []
+        
+        for i in range(0, len(artworks), BATCH_SIZE):
+            batch = artworks[i:i + BATCH_SIZE]
+            
+            artwork_list = [
+                {
+                    "id": artwork.id,
+                    "title": artwork.title,
+                    "artist_id": artwork.artist_id,
+                    "artist_name": artwork.artist.name if artwork.artist else "",
+                    "thumbnail_url": artwork.thumbnail_url,
+                }
+                for artwork in batch
+            ]
+            
+            batch_num = i // BATCH_SIZE + 1
+            total_batches = (len(artworks) + BATCH_SIZE - 1) // BATCH_SIZE
+            logger.info(f"배치 {batch_num}/{total_batches}: {len(artwork_list)}개 작품 매칭")
+            
+            try:
+                batch_result = lambda_client.invoke_image_matching(
+                    image_base64=resized_image,  # ✅ 리사이즈된 이미지 사용
+                    artworks=artwork_list,
+                    threshold=request.threshold,
+                )
+                
+                if batch_result.get("results"):
+                    all_results.extend(batch_result["results"])
+                    logger.info(f"배치 {batch_num}: {len(batch_result['results'])}개 매칭됨")
+                    
+            except Exception as e:
+                logger.error(f"배치 {batch_num} 매칭 오류: {e}")
+                continue
+        
+        logger.info(f"전체 배치 완료: 총 {len(all_results)}개 매칭됨")
+        
+        # 3. 결과에 전시 정보 추가
+        artwork_dict = {artwork.id: artwork for artwork in artworks}
+        
+        enhanced_results = []
+        for result in all_results:
+            artwork = artwork_dict.get(result["artwork_id"])
+            if artwork:
+                enhanced_results.append({
+                    "artwork_id": result["artwork_id"],
+                    "title": result["title"],
+                    "artist_id": result["artist_id"],
+                    "artist_name": result["artist_name"],
+                    "thumbnail_url": result.get("thumbnail_url"),
+                    "similarity": result["similarity"],
+                    "exhibitions": [
+                        {
+                            "id": ex.id,
+                            "title": ex.title,
+                            "venue_name": ex.venue.name if ex.venue else "",
+                            "start_date": ex.start_date,
+                            "end_date": ex.end_date,
+                            "cover_image_url": ex.cover_image_url,
+                        }
+                        for ex in artwork.exhibitions
+                    ]
+                })
+        
+        # 4. 유사도 높은 순 정렬
+        enhanced_results.sort(key=lambda x: x["similarity"], reverse=True)
+        
+        logger.info(f"매칭 완료: 총 {len(enhanced_results)}개 작품 발견")
+        
+        return {
+            "matched": len(enhanced_results) > 0,
+            "total_matches": len(enhanced_results),
+            "threshold": request.threshold,
+            "results": enhanced_results,
+        }
 
     except HTTPException:
         raise
