@@ -37,7 +37,7 @@ jobs:
                   username: ubuntu
                   key: ${{ secrets.TEST_SERVER_SSH_KEY }}
                   script: |
-                      cd ~/lastdance-api
+                      cd ~/2025-C6-M15-LastDance-API/
 
                       # Git 업데이트 
                       git fetch origin
