@@ -373,7 +373,7 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
         logger.info(f"전체 작품 {len(artworks)}개와 매칭 시작")
 
         # 2. 배치 처리
-        BATCH_SIZE = 50  # 이미지 작아졌으니 배치 크기 증가
+        BATCH_SIZE = 50 
         all_results = []
         
         for i in range(0, len(artworks), BATCH_SIZE):
@@ -396,7 +396,7 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
             
             try:
                 batch_result = lambda_client.invoke_image_matching(
-                    image_base64=resized_image,  # ✅ 리사이즈된 이미지 사용
+                    image_base64=resized_image,
                     artworks=artwork_list,
                     threshold=request.threshold,
                 )
@@ -419,11 +419,11 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
             artwork = artwork_dict.get(result["artwork_id"])
             if artwork:
                 enhanced_results.append({
-                    "artwork_id": result["artwork_id"],
-                    "title": result["title"],
-                    "artist_id": result["artist_id"],
-                    "artist_name": result["artist_name"],
-                    "thumbnail_url": result.get("thumbnail_url"),
+                    "artwork_id": artwork.id,  
+                    "title": artwork.title,  
+                    "artist_id": artwork.artist_id,  
+                    "artist_name": artwork.artist.name if artwork.artist else "",  
+                    "thumbnail_url": artwork.thumbnail_url,  
                     "similarity": result["similarity"],
                     "exhibitions": [
                         {
