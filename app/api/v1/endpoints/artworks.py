@@ -301,7 +301,7 @@ def delete_artwork(
     return None
 
 
-def resize_base64_image(base64_string: str, max_size: int = 1024) -> str:
+def resize_base64_image(base64_string: str, max_size: int = 1536) -> str:
     """
     base64 이미지를 리사이즈하여 크기 줄이기
     
@@ -326,7 +326,7 @@ def resize_base64_image(base64_string: str, max_size: int = 1024) -> str:
         
         # 이미지 → base64
         buffer = io.BytesIO()
-        image.save(buffer, format="JPEG", quality=85, optimize=True)
+        image.save(buffer, format="JPEG", quality=95, optimize=True)
         resized_base64 = base64.b64encode(buffer.getvalue()).decode()
         
         return resized_base64
