@@ -39,3 +39,5 @@ docker-compose.override.yml
 # Uploads (if storing locally for testing)
 uploads/
 temp/
+
+tests/
