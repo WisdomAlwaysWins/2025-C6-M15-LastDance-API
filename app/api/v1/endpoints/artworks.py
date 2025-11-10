@@ -373,7 +373,7 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
         logger.info(f"전체 작품 {len(artworks)}개와 매칭 시작")
 
         # 2. 배치 처리
-        BATCH_SIZE = 50 
+        BATCH_SIZE = 20 
         all_results = []
         
         for i in range(0, len(artworks), BATCH_SIZE):
