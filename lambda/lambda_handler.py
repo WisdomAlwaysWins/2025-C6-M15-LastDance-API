@@ -1,6 +1,6 @@
 """
-AWS Lambda 함수: 실시간 이미지 매칭
-업로드된 이미지 vs 전시의 작품들
+AWS Lambda 함수: 단일 이미지 임베딩 생성
+DINOv2-small 모델 사용
 """
 import json
 import torch
@@ -9,8 +9,6 @@ from PIL import Image
 import numpy as np
 import io
 import base64
-import requests
-from typing import List, Dict
 import os
 
 # Lambda /tmp 폴더 사용 (쓰기 가능)
@@ -41,7 +39,7 @@ def load_model():
 
 
 def get_embedding(image: Image.Image) -> np.ndarray:
-    """이미지에서 임베딩 추출"""
+    """이미지에서 임베딩 추출 (384차원)"""
     inputs = PROCESSOR(images=image, return_tensors="pt")
     inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
     
@@ -52,57 +50,26 @@ def get_embedding(image: Image.Image) -> np.ndarray:
     return embedding.squeeze()
 
 
-def cosine_similarity(emb1: np.ndarray, emb2: np.ndarray) -> float:
-    """코사인 유사도 계산"""
-    dot_product = np.dot(emb1, emb2)
-    norm1 = np.linalg.norm(emb1)
-    norm2 = np.linalg.norm(emb2)
-    return float(dot_product / (norm1 * norm2))
-
-
-def download_image_from_url(url: str) -> Image.Image:
-    """URL에서 이미지 다운로드"""
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
-    return Image.open(io.BytesIO(response.content)).convert("RGB")
-
-
 def handler(event, context):
     """
     Lambda 핸들러
     
     Request:
     {
-        "image_base64": "iVBORw0KGgoAAAANS...",
-        "artworks": [
-            {
-                "id": 1,
-                "title": "작품명",
-                "artist_id": 1,
-                "thumbnail_url": "https://..."
-            }
-        ],
-        "threshold": 0.7
+        "image_base64": "iVBORw0KGgoAAAANS..."
+    }
+    
+    또는 Warming up:
+    {
+        "warmup": true
     }
     
     Response:
     {
-        "matched": true,
-        "total_matches": 2,
-        "threshold": 0.7,
-        "results": [
-            {
-                "artwork_id": 1,
-                "title": "작품명",
-                "artist_id": 1,
-                "thumbnail_url": "https://...",
-                "similarity": 0.8523
-            }
-        ]
+        "embedding" : [0.123, 0.456, ...], // 384차원 벡터
+        "dimension" : 384
     }
     """
-    
-    print(f"📨 Lambda 실행 시작")
     
     # CORS 헤더
     headers = {
@@ -113,6 +80,16 @@ def handler(event, context):
     }
     
     try:
+        # ✅ 워밍업 요청 체크
+        if event.get('warmup'):
+            print("🔥 Warming up... 모델 로드 유지")
+            load_model()
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': json.dumps({'message': 'warmed up', 'status': 'ready'})
+            }
+        
         # OPTIONS 요청 (CORS preflight)
         if event.get('httpMethod') == 'OPTIONS' or event.get('requestContext', {}).get('http', {}).get('method') == 'OPTIONS':
             return {
@@ -120,6 +97,8 @@ def handler(event, context):
                 'headers': headers,
                 'body': json.dumps({'message': 'OK'})
             }
+        
+        print(f"📨 Lambda 실행 시작: 임베딩 생성")
         
         # 모델 로드
         load_model()
@@ -133,8 +112,6 @@ def handler(event, context):
         
         body = json.loads(body_str)
         image_base64 = body.get('image_base64')
-        artworks = body.get('artworks', [])
-        threshold = float(body.get('threshold', 0.7))
         
         # Validation
         if not image_base64:
@@ -145,34 +122,11 @@ def handler(event, context):
                     'error': 'image_base64 필드가 필요합니다',
                     'example': {
                         'image_base64': 'base64_encoded_image_string',
-                        'artworks': [{'id': 1, 'thumbnail_url': '...'}],
-                        'threshold': 0.7
                     }
                 })
             }
         
-        if not artworks:
-            return {
-                'statusCode': 400,
-                'headers': headers,
-                'body': json.dumps({
-                    'error': 'artworks 필드가 필요합니다 (작품 목록)',
-                    'example': {
-                        'image_base64': 'base64_encoded_image_string',
-                        'artworks': [
-                            {
-                                'id': 1,
-                                'title': '작품명',
-                                'artist_id': 1,
-                                'thumbnail_url': 'https://...'
-                            }
-                        ],
-                        'threshold': 0.7
-                    }
-                })
-            }
-        
-        print(f"🖼️  이미지 디코딩 중... (threshold: {threshold})")
+        print(f"🖼️  이미지 디코딩 중...")
         
         # Base64 디코딩
         try:
@@ -187,67 +141,19 @@ def handler(event, context):
             }
         
         # 업로드된 이미지의 임베딩 생성
-        print(f"🧠 업로드 이미지 임베딩 생성 중...")
-        uploaded_embedding = get_embedding(uploaded_image)
-        print(f"✅ 임베딩 생성 완료: shape {uploaded_embedding.shape}")
-        
-        print(f"📊 총 {len(artworks)}개 작품과 비교 중...")
-        
-        # 각 작품과 유사도 계산
-        matches = []
-        processed = 0
-        skipped = 0
-        
-        for artwork in artworks:
-            artwork_id = artwork.get('id')
-            thumbnail_url = artwork.get('thumbnail_url')
-            
-            if not thumbnail_url:
-                skipped += 1
-                continue
-            
-            try:
-                # 작품 이미지 다운로드
-                artwork_image = download_image_from_url(thumbnail_url)
-                
-                # 작품 이미지 임베딩 생성
-                artwork_embedding = get_embedding(artwork_image)
-                
-                # 유사도 계산
-                similarity = cosine_similarity(uploaded_embedding, artwork_embedding)
-                
-                processed += 1
-                print(f"🎨 작품 {artwork_id} ({artwork.get('title')}): 유사도 {similarity:.4f}")
-                
-                if similarity >= threshold:
-                    matches.append({
-                        'artwork_id': artwork_id,
-                        'title': artwork.get('title'),
-                        'artist_id': artwork.get('artist_id'),
-                        'thumbnail_url': thumbnail_url,
-                        'similarity': round(float(similarity), 4)
-                    })
-            
-            except Exception as e:
-                print(f"⚠️  작품 {artwork_id} 처리 실패: {e}")
-                skipped += 1
-                continue
-        
-        # 유사도 높은 순 정렬
-        matches.sort(key=lambda x: x['similarity'], reverse=True)
-        
-        print(f"✅ 매칭 완료: 처리 {processed}개, 스킵 {skipped}개, 매칭 {len(matches)}개")
+        print(f"🧠 이미지 임베딩 생성 중...")
+        embedding = get_embedding(uploaded_image)
+        print(f"✅ 임베딩 생성 완료: shape {embedding.shape}")
+
+        # NumPy array → Python list 변환
+        embedding_list = embedding.tolist()
         
         return {
             'statusCode': 200,
             'headers': headers,
             'body': json.dumps({
-                'matched': len(matches) > 0,
-                'total_matches': len(matches),
-                'threshold': threshold,
-                'processed_artworks': processed,
-                'skipped_artworks': skipped,
-                'results': matches
+                'embedding': embedding_list,
+                'dimension': len(embedding_list)
             }, ensure_ascii=False)
         }
         
