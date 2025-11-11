@@ -9,6 +9,8 @@ from app.models.artwork import Artwork
 from app.utils.lambda_client import lambda_client
 import base64
 import requests
+from PIL import Image
+import io
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,6 +31,52 @@ def download_image_as_base64(url: str) -> str:
     except Exception as e:
         logger.error(f"이미지 다운로드 실패: {e}")
         raise
+
+
+def resize_base64_image(base64_string: str, max_size: int = 800) -> str:
+    """
+    base64 이미지 리사이즈
+    
+    Args:
+        base64_string: base64 인코딩된 이미지
+        max_size: 최대 가로/세로 크기 (px)
+        
+    Returns:
+        str: 리사이즈된 base64 이미지
+    """
+    try:
+        # base64 → 이미지
+        image_data = base64.b64decode(base64_string)
+        image = Image.open(io.BytesIO(image_data))
+        
+        # RGB로 변환
+        if image.mode in ("RGBA", "LA", "P"):
+            image = image.convert("RGB")
+        
+        # 현재 크기
+        width, height = image.size
+        
+        # 리사이즈 필요한지 확인
+        if width > max_size or height > max_size:
+            # 비율 유지하며 리사이즈
+            image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            
+            # 이미지 → base64
+            buffer = io.BytesIO()
+            image.save(buffer, format="JPEG", quality=85, optimize=True)
+            resized_base64 = base64.b64encode(buffer.getvalue()).decode()
+            
+            size_before = len(base64_string) / 1024 / 1024
+            size_after = len(resized_base64) / 1024 / 1024
+            logger.info(f"리사이즈: {size_before:.2f}MB → {size_after:.2f}MB")
+            
+            return resized_base64
+        
+        return base64_string
+        
+    except Exception as e:
+        logger.error(f"이미지 리사이즈 실패: {e}, 원본 사용")
+        return base64_string
 
 
 def generate_all_embeddings():
@@ -55,12 +103,15 @@ def generate_all_embeddings():
                 # 1. 이미지 다운로드
                 image_base64 = download_image_as_base64(artwork.thumbnail_url)
                 
-                # 2. Lambda로 임베딩 생성
+                # 2. 리사이즈 (6MB 제한 대응)
+                image_base64 = resize_base64_image(image_base64, max_size=800)
+                
+                # 3. Lambda로 임베딩 생성
                 logger.info("Lambda 호출: 임베딩 생성 중...")
                 embedding = lambda_client.generate_embedding(image_base64)
                 logger.info(f"임베딩 생성 완료: {len(embedding)}차원")
                 
-                # 3. DB 저장 (raw SQL 사용)
+                # 4. DB 저장 (raw SQL 사용)
                 db.execute(
                     text("""
                         UPDATE artworks 

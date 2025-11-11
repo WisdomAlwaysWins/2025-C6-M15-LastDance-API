@@ -26,7 +26,6 @@ jobs:
             - name: Build and Push Docker image
               run: |
                   docker buildx build --platform linux/amd64 \
-                    --no-cache \
                     -t kimjihye314/lastdance-api:test \
                     -t kimjihye314/lastdance-api:test-${{ github.sha }} \
                     --push .
