@@ -3,6 +3,7 @@
 """
 
 import logging
+from sqlalchemy import text
 from app.database import SessionLocal
 from app.models.artwork import Artwork
 from app.utils.lambda_client import lambda_client
@@ -59,8 +60,16 @@ def generate_all_embeddings():
                 embedding = lambda_client.generate_embedding(image_base64)
                 logger.info(f"임베딩 생성 완료: {len(embedding)}차원")
                 
-                # 3. DB 저장
-                artwork.embedding = embedding
+                # 3. DB 저장 (raw SQL 사용)
+                db.execute(
+                    text("""
+                        UPDATE artworks 
+                        SET embedding = CAST(:embedding AS vector), 
+                            updated_at = now() 
+                        WHERE id = :id
+                    """),
+                    {"embedding": str(embedding), "id": artwork.id}
+                )
                 db.commit()
                 
                 success_count += 1
