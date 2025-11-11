@@ -1,16 +1,15 @@
 # app/api/v1/endpoints/artworks.py
-import logging
-from typing import List, Optional
-from PIL import Image
 import base64
 import io
+import logging
+from typing import List, Optional
 
-from sqlalchemy import func
+from PIL import Image
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import text
 
 from app.api.deps import verify_api_key
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.models.artist import Artist
 from app.models.artwork import Artwork
 from app.models.exhibition import Exhibition
@@ -23,8 +22,20 @@ from app.schemas.artwork import (
     ArtworkResponse,
     ArtworkUpdate,
 )
+from app.utils.embedding_utils import generate_embedding_background
 from app.utils.lambda_client import lambda_client
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from app.utils.s3_client import s3_client
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +89,7 @@ def get_artworks(
         db.query(
             Artwork,
             Artist.name.label("artist_name"),
-            func.count(Reaction.id).label("reaction_count")
+            func.count(Reaction.id).label("reaction_count"),
         )
         .join(Artist, Artwork.artist_id == Artist.id)
         .outerjoin(Reaction, Artwork.id == Reaction.artwork_id)
@@ -92,23 +103,25 @@ def get_artworks(
         query = query.join(Artwork.exhibitions).filter(Exhibition.id == exhibition_id)
 
     results = query.order_by(Artwork.id).all()
-    
+
     # ArtworkResponse 형식으로 변환
     artworks = []
     for artwork, artist_name, reaction_count in results:
-        artworks.append({
-            "id": artwork.id,
-            "title": artwork.title,
-            "artist_id": artwork.artist_id,
-            "artist_name": artist_name,
-            "description": artwork.description,
-            "year": artwork.year,
-            "thumbnail_url": artwork.thumbnail_url,
-            "reaction_count": reaction_count,
-            "created_at": artwork.created_at,
-            "updated_at": artwork.updated_at,
-        })
-    
+        artworks.append(
+            {
+                "id": artwork.id,
+                "title": artwork.title,
+                "artist_id": artwork.artist_id,
+                "artist_name": artist_name,
+                "description": artwork.description,
+                "year": artwork.year,
+                "thumbnail_url": artwork.thumbnail_url,
+                "reaction_count": reaction_count,
+                "created_at": artwork.created_at,
+                "updated_at": artwork.updated_at,
+            }
+        )
+
     return artworks
 
 
@@ -121,13 +134,13 @@ def get_artworks(
 def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
     """
     작품 상세 조회 (전체 정보)
-    
+
     Args:
         artwork_id: 작품 ID
-        
+
     Returns:
         ArtworkDetail: 작품 상세 정보 (artist, exhibitions, reaction_count 포함)
-        
+
     Raises:
         404: 작품을 찾을 수 없음
     """
@@ -137,18 +150,18 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
         .options(
             joinedload(Artwork.artist),
             joinedload(Artwork.exhibitions).joinedload(Exhibition.venue),
-            joinedload(Artwork.reactions)
+            joinedload(Artwork.reactions),
         )
         .filter(Artwork.id == artwork_id)
         .first()
     )
-    
+
     if not artwork:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
         )
-    
+
     # ArtworkDetail 형식으로 변환
     result = {
         "id": artwork.id,
@@ -173,7 +186,7 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
         "created_at": artwork.created_at,
         "updated_at": artwork.updated_at,
     }
-    
+
     return result
 
 
@@ -182,10 +195,15 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
     response_model=ArtworkDetail,
     status_code=status.HTTP_201_CREATED,
     summary="작품 생성",
-    description="새 작품을 등록합니다. (관리자 전용, API Key 필요)",
+    description="새 작품을 등록합니다. 이미지 업로드 및 임베딩 자동 생성. (관리자 전용, API Key 필요)",
 )
-def create_artwork(
-    artwork_data: ArtworkCreate,
+async def create_artwork(
+    background_tasks: BackgroundTasks,
+    title: str = Form(..., description="작품 제목"),
+    artist_id: int = Form(..., description="작가 ID"),
+    description: Optional[str] = Form(None, description="작품 설명"),
+    year: Optional[int] = Form(None, description="제작 연도"),
+    thumbnail: UploadFile = File(..., description="썸네일 이미지 파일"),
     db: Session = Depends(get_db),
     _: bool = Depends(verify_api_key),
 ):
@@ -193,55 +211,108 @@ def create_artwork(
     작품 생성 (관리자)
 
     Args:
-        artwork_data: 작품 생성 데이터
-        
+        background_tasks: 백그라운드 작업
+        title: 작품 제목
+        artist_id: 작가 ID
+        description: 작품 설명 (선택)
+        year: 제작 연도 (선택)
+        thumbnail: 썸네일 이미지 파일
+
     Returns:
         ArtworkDetail: 생성된 작품 정보 (작가, 전시 포함)
 
     Raises:
         404: 존재하지 않는 artist_id
+        500: S3 업로드 실패
+
+    Note:
+        - 이미지는 S3 artworks 폴더에 저장
+        - 임베딩은 백그라운드에서 자동 생성 (약 3초)
     """
     # Artist 존재 여부 확인
-    artist = db.query(Artist).filter(Artist.id == artwork_data.artist_id).first()
+    artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"작가 ID {artwork_data.artist_id}를 찾을 수 없습니다",
+            detail=f"작가 ID {artist_id}를 찾을 수 없습니다",
         )
 
-    new_artwork = Artwork(**artwork_data.model_dump())
+    # S3에 썸네일 업로드
+    try:
+        thumbnail_url = await s3_client.upload_file(file=thumbnail, folder="artworks")
+        logger.info(f"S3 업로드 성공: {thumbnail_url}")
+    except Exception as e:
+        logger.error(f"S3 업로드 실패: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"이미지 업로드 실패: {str(e)}",
+        )
+
+    # Artwork 생성
+    new_artwork = Artwork(
+        title=title,
+        artist_id=artist_id,
+        description=description,
+        year=year,
+        thumbnail_url=thumbnail_url,
+    )
     db.add(new_artwork)
     db.commit()
     db.refresh(new_artwork)
-    
+
+    # 백그라운드에서 임베딩 생성
+    logger.info(f"임베딩 생성 예약: Artwork ID {new_artwork.id}")
+    background_tasks.add_task(
+        generate_embedding_background,
+        artwork_id=int(new_artwork.id),
+        thumbnail_url=thumbnail_url,
+        title=title,
+        db=SessionLocal(),
+    )
+
     # 생성 후 상세 정보 조회하여 반환
-    return get_artwork(new_artwork.id, db)
+    return get_artwork(int(new_artwork.id), db)
 
 
 @router.put(
     "/{artwork_id}",
     response_model=ArtworkDetail,
     summary="작품 수정",
-    description="작품 정보를 수정합니다. (관리자 전용, API Key 필요)",
+    description="작품 정보를 수정합니다. 이미지 수정 시 기존 S3 이미지 삭제 및 임베딩 재생성. (관리자 전용, API Key 필요)",
 )
-def update_artwork(
+async def update_artwork(
     artwork_id: int,
-    artwork_data: ArtworkUpdate,
+    background_tasks: BackgroundTasks,
+    title: Optional[str] = Form(None, description="작품 제목"),
+    artist_id: Optional[int] = Form(None, description="작가 ID"),
+    description: Optional[str] = Form(None, description="작품 설명"),
+    year: Optional[int] = Form(None, description="제작 연도"),
+    thumbnail: Optional[UploadFile] = File(None, description="새 썸네일 이미지"),
     db: Session = Depends(get_db),
     _: bool = Depends(verify_api_key),
 ):
     """
     작품 정보 수정 (관리자)
-    
+
     Args:
         artwork_id: 작품 ID
-        artwork_data: 수정 데이터
+        background_tasks: 백그라운드 작업
+        title: 작품 제목 (선택)
+        artist_id: 작가 ID (선택)
+        description: 작품 설명 (선택)
+        year: 제작 연도 (선택)
+        thumbnail: 새 썸네일 이미지 (선택)
 
     Returns:
         ArtworkDetail: 수정된 작품 정보 (작가, 전시 포함)
-        
+
     Raises:
         404: 작품 또는 작가를 찾을 수 없음
+        500: S3 업로드 실패
+
+    Note:
+        - 이미지 교체 시 기존 S3 이미지 삭제
+        - 이미지 교체 시 임베딩 재생성
     """
     artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
     if not artwork:
@@ -251,21 +322,62 @@ def update_artwork(
         )
 
     # Artist 존재 여부 확인
-    if artwork_data.artist_id:
-        artist = db.query(Artist).filter(Artist.id == artwork_data.artist_id).first()
+    if artist_id:
+        artist = db.query(Artist).filter(Artist.id == artist_id).first()
         if not artist:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"작가 ID {artwork_data.artist_id}를 찾을 수 없습니다",
+                detail=f"작가 ID {artist_id}를 찾을 수 없습니다",
             )
 
-    update_data = artwork_data.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(artwork, key, value)
+    # 필드 수정
+    if title is not None:
+        artwork.title = title  # type: ignore
+    if artist_id is not None:
+        artwork.artist_id = artist_id  # type: ignore
+    if description is not None:
+        artwork.description = description  # type: ignore
+    if year is not None:
+        artwork.year = year  # type: ignore
+
+    # 썸네일 이미지 교체
+    if thumbnail is not None:
+        # 기존 S3 이미지 삭제
+        old_thumbnail_url = artwork.thumbnail_url
+        if old_thumbnail_url:
+            try:
+                s3_client.delete_file(str(old_thumbnail_url))
+                logger.info(f"기존 썸네일 삭제 성공: {old_thumbnail_url}")
+            except Exception as e:
+                logger.warning(f"기존 썸네일 삭제 실패 (계속 진행): {e}")
+
+        # 새 이미지 업로드
+        try:
+            new_thumbnail_url = await s3_client.upload_file(
+                file=thumbnail, folder="artworks"
+            )
+            artwork.thumbnail_url = new_thumbnail_url  # type: ignore
+            logger.info(f"새 썸네일 업로드 성공: {new_thumbnail_url}")
+
+            # 백그라운드에서 임베딩 재생성
+            logger.info(f"임베딩 재생성 예약: Artwork ID {artwork_id}")
+            background_tasks.add_task(
+                generate_embedding_background,
+                artwork_id=artwork_id,
+                thumbnail_url=new_thumbnail_url,
+                title=artwork.title,
+                db=SessionLocal(),
+            )
+        except Exception as e:
+            logger.error(f"S3 업로드 실패: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"이미지 업로드 실패: {str(e)}",
+            )
 
     db.commit()
     db.refresh(artwork)
-    
+
     # 수정 후 상세 정보 조회하여 반환
     return get_artwork(artwork_id, db)
 
@@ -274,21 +386,24 @@ def update_artwork(
     "/{artwork_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="작품 삭제",
-    description="작품을 삭제합니다. (관리자 전용, API Key 필요)",
+    description="작품을 삭제합니다. S3 이미지도 함께 삭제. (관리자 전용, API Key 필요)",
 )
-def delete_artwork(
+async def delete_artwork(
     artwork_id: int,
     db: Session = Depends(get_db),
     _: bool = Depends(verify_api_key),
 ):
     """
     작품 삭제 (관리자)
-    
+
     Args:
         artwork_id: 작품 ID
-        
+
     Raises:
         404: 작품을 찾을 수 없음
+
+    Note:
+        S3에 저장된 썸네일 이미지도 함께 삭제됩니다
     """
     artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
     if not artwork:
@@ -297,47 +412,58 @@ def delete_artwork(
             detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
         )
 
+    # S3에서 썸네일 삭제
+    if artwork.thumbnail_url:
+        try:
+            s3_client.delete_file(str(artwork.thumbnail_url))
+            logger.info(f"S3 썸네일 삭제 성공: {artwork.thumbnail_url}")
+        except Exception as e:
+            logger.warning(f"S3 썸네일 삭제 실패 (계속 진행): {e}")
+
+    # DB에서 작품 삭제
     db.delete(artwork)
     db.commit()
+
+    logger.info(f"Artwork ID {artwork_id} 삭제 완료")
     return None
 
 
 def resize_base64_image_smart(base64_string: str, max_size: int = 1024) -> str:
     """
     조건부 이미지 리사이즈 (1MB 이하는 스킵)
-    
+
     Args:
         base64_string: base64 인코딩된 이미지
         max_size: 최대 가로/세로 크기 (px)
-        
+
     Returns:
         str: 리사이즈된 base64 이미지 (또는 원본)
     """
     size_mb = len(base64_string) / 1024 / 1024
-    
+
     # 1MB 이하면 원본 사용
     if size_mb <= 1.0:
         return base64_string
-    
+
     try:
         # base64 → 이미지
         image_data = base64.b64decode(base64_string)
         image = Image.open(io.BytesIO(image_data))
-        
+
         # RGB로 변환
         if image.mode in ("RGBA", "LA", "P"):
             image = image.convert("RGB")
-        
+
         # 리사이즈 (비율 유지)
         image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-        
+
         # 이미지 → base64
         buffer = io.BytesIO()
         image.save(buffer, format="JPEG", quality=85, optimize=True)
         resized_base64 = base64.b64encode(buffer.getvalue()).decode()
-        
+
         return resized_base64
-        
+
     except Exception as e:
         logger.error(f"이미지 리사이즈 실패: {e}, 원본 사용")
         return base64_string
@@ -362,26 +488,28 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
         if not request.image_base64:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미지가 제공되지 않았습니다."
+                detail="이미지가 제공되지 않았습니다.",
             )
-        
+
         size_mb = len(request.image_base64) / 1024 / 1024
         if size_mb > 50:
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"이미지 크기가 너무 큽니다: {size_mb:.2f}MB (최대 50MB)"
+                detail=f"이미지 크기가 너무 큽니다: {size_mb:.2f}MB (최대 50MB)",
             )
-        
+
         logger.info(f"이미지 매칭 시작: {size_mb:.2f}MB")
 
         # 2. 조건부 리사이즈 (1MB 이하면 스킵)
         if size_mb > 1.0:
             logger.info(f"이미지 리사이즈 시작: {size_mb:.2f}MB")
-            resized_image = resize_base64_image_smart(request.image_base64, max_size=1024)
+            resized_image = resize_base64_image_smart(
+                request.image_base64, max_size=1024
+            )
             new_size_mb = len(resized_image) / 1024 / 1024
             logger.info(f"리사이즈 완료: {size_mb:.2f}MB → {new_size_mb:.2f}MB")
         else:
-            logger.info(f"리사이즈 생략 (1MB 이하)")
+            logger.info("리사이즈 생략 (1MB 이하)")
             resized_image = request.image_base64
 
         # 3. Lambda로 사용자 이미지 임베딩 생성
@@ -394,7 +522,8 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
 
         # pgvector 코사인 유사도 검색
         # 1 - (embedding <=> user_embedding) = 코사인 유사도
-        query = text("""
+        query = text(
+            """
             SELECT 
                 a.id,
                 a.title,
@@ -406,16 +535,17 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
                 AND 1 - (a.embedding <=> CAST(:user_embedding AS vector)) >= :threshold
             ORDER BY a.embedding <=> CAST(:user_embedding AS vector)
             LIMIT 10
-        """)
+        """
+        )
 
         results = db.execute(
             query,
             {
-                "user_embedding": str(user_embedding),  # [0.1, 0.2, ...] → string
-                "threshold": request.threshold
-            }
+                "user_embedding": str(user_embedding),
+                "threshold": request.threshold,
+            },
         ).fetchall()
-        
+
         logger.info(f"유사도 검색 완료: {len(results)}개 매칭됨")
 
         # 5. 결과에 상세 정보 추가
@@ -427,32 +557,34 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
                 db.query(Artwork)
                 .options(
                     joinedload(Artwork.artist),
-                    joinedload(Artwork.exhibitions).joinedload(Exhibition.venue)
+                    joinedload(Artwork.exhibitions).joinedload(Exhibition.venue),
                 )
                 .filter(Artwork.id == row.id)
                 .first()
             )
-        
+
             if artwork:
-                matched_artworks.append({
-                    "artwork_id": artwork.id,
-                    "title": artwork.title,
-                    "artist_id": artwork.artist_id,
-                    "artist_name": artwork.artist.name if artwork.artist else "",
-                    "thumbnail_url": artwork.thumbnail_url,
-                    "similarity": float(row.similarity),
-                    "exhibitions": [
-                        {
-                            "id": ex.id,
-                            "title": ex.title,
-                            "venue_name": ex.venue.name if ex.venue else "",
-                            "start_date": ex.start_date,
-                            "end_date": ex.end_date,
-                            "cover_image_url": ex.cover_image_url,
-                        }
-                        for ex in artwork.exhibitions
-                    ]
-                })
+                matched_artworks.append(
+                    {
+                        "artwork_id": artwork.id,
+                        "title": artwork.title,
+                        "artist_id": artwork.artist_id,
+                        "artist_name": artwork.artist.name if artwork.artist else "",
+                        "thumbnail_url": artwork.thumbnail_url,
+                        "similarity": float(row.similarity),
+                        "exhibitions": [
+                            {
+                                "id": ex.id,
+                                "title": ex.title,
+                                "venue_name": ex.venue.name if ex.venue else "",
+                                "start_date": ex.start_date,
+                                "end_date": ex.end_date,
+                                "cover_image_url": ex.cover_image_url,
+                            }
+                            for ex in artwork.exhibitions
+                        ],
+                    }
+                )
 
         logger.info(f"매칭 완료: 총 {len(matched_artworks)}개 작품")
 

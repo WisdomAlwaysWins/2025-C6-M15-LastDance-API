@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 from app.schemas.exhibition import ExhibitionSummary
 
+
 class ArtworkCreate(BaseModel):
     """
     작품 생성 요청
@@ -19,6 +20,7 @@ class ArtworkCreate(BaseModel):
         year: 제작 연도 (선택)
         thumbnail_url: 썸네일 이미지 URL (선택)
     """
+
     title: str = Field(..., description="작품 제목")
     artist_id: int = Field(..., description="작가 ID")
     description: Optional[str] = Field(None, description="작품 설명")
@@ -37,6 +39,7 @@ class ArtworkUpdate(BaseModel):
         year: 제작 연도 (선택)
         thumbnail_url: 썸네일 이미지 URL (선택)
     """
+
     title: Optional[str] = None
     artist_id: Optional[int] = None
     description: Optional[str] = None
@@ -47,7 +50,7 @@ class ArtworkUpdate(BaseModel):
 class ArtworkResponse(BaseModel):
     """
     작품 기본 응답 (리스트용)
-    
+
     GET /artworks 리스트 조회 시 사용
 
     Attributes:
@@ -62,6 +65,7 @@ class ArtworkResponse(BaseModel):
         created_at: 생성일시
         updated_at: 수정일시
     """
+
     id: int
     title: str
     artist_id: int
@@ -80,7 +84,7 @@ class ArtworkResponse(BaseModel):
 class ArtworkDetail(BaseModel):
     """
     작품 상세 응답 (상세 조회용)
-    
+
     GET /artworks/{id} 상세 조회 시 사용
 
     Attributes:
@@ -96,6 +100,7 @@ class ArtworkDetail(BaseModel):
         created_at: 생성일시
         updated_at: 수정일시
     """
+
     id: int
     title: str
     artist_id: int
@@ -119,10 +124,11 @@ class ArtworkMatchRequest(BaseModel):
     Attributes:
         image_base64: Base64 인코딩된 이미지
         threshold: 유사도 임계값 (0.0 ~ 1.0, 기본값 0.7)
-        
+
     Note:
         전시 필터링 없이 전체 작품에서 매칭합니다.
     """
+
     image_base64: str = Field(..., description="Base64 인코딩된 이미지")
     threshold: float = Field(0.7, ge=0.0, le=1.0, description="유사도 임계값")
 
@@ -140,6 +146,7 @@ class ArtworkMatchResult(BaseModel):
         similarity: 유사도 점수 (0.0 ~ 1.0)
         exhibitions: 해당 작품이 전시된 전시 목록
     """
+
     artwork_id: int
     title: str
     artist_id: int
@@ -162,6 +169,7 @@ class ArtworkMatchResponse(BaseModel):
         threshold: 사용된 임계값
         results: 매칭 결과 목록 (유사도 높은 순)
     """
+
     matched: bool
     total_matches: int
     threshold: float

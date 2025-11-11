@@ -26,10 +26,7 @@ router = APIRouter(prefix="/visit-histories", tags=["Visit Histories"])
     summary="방문 기록 생성",
     description="새 방문 기록을 생성합니다.",
 )
-def create_visit_history(
-    visit_data: VisitHistoryCreate,
-    db: Session = Depends(get_db)
-):
+def create_visit_history(visit_data: VisitHistoryCreate, db: Session = Depends(get_db)):
     """
     방문 기록 생성
 
@@ -97,7 +94,7 @@ def get_visit_histories(
             VisitHistory,
             Visitor.name.label("visitor_name"),
             Exhibition.title.label("exhibition_title"),
-            func.count(Reaction.id).label("reaction_count")
+            func.count(Reaction.id).label("reaction_count"),
         )
         .join(Visitor, VisitHistory.visitor_id == Visitor.id)
         .join(Exhibition, VisitHistory.exhibition_id == Exhibition.id)
@@ -111,20 +108,22 @@ def get_visit_histories(
         query = query.filter(VisitHistory.exhibition_id == exhibition_id)
 
     results = query.order_by(VisitHistory.visited_at.desc()).all()
-    
+
     # VisitHistoryResponse 형식으로 변환
     visits = []
     for visit, visitor_name, exhibition_title, reaction_count in results:
-        visits.append({
-            "id": visit.id,
-            "visitor_id": visit.visitor_id,
-            "visitor_name": visitor_name,
-            "exhibition_id": visit.exhibition_id,
-            "exhibition_title": exhibition_title,
-            "visited_at": visit.visited_at,
-            "reaction_count": reaction_count,
-        })
-    
+        visits.append(
+            {
+                "id": visit.id,
+                "visitor_id": visit.visitor_id,
+                "visitor_name": visitor_name,
+                "exhibition_id": visit.exhibition_id,
+                "exhibition_title": exhibition_title,
+                "visited_at": visit.visited_at,
+                "reaction_count": reaction_count,
+            }
+        )
+
     return visits
 
 
@@ -153,32 +152,38 @@ def get_visit_history(visit_id: int, db: Session = Depends(get_db)):
         .options(
             joinedload(VisitHistory.visitor),
             joinedload(VisitHistory.exhibition).joinedload(Exhibition.venue),
-            joinedload(VisitHistory.reactions).joinedload(Reaction.artwork)
+            joinedload(VisitHistory.reactions).joinedload(Reaction.artwork),
         )
         .filter(VisitHistory.id == visit_id)
         .first()
     )
-    
+
     if not visit:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"방문 기록 ID {visit_id}를 찾을 수 없습니다",
         )
-    
+
     # VisitHistoryDetail 형식으로 변환
     result = {
         "id": visit.id,
         "visitor_id": visit.visitor_id,
         "visitor_name": visit.visitor.name if visit.visitor else None,
         "exhibition_id": visit.exhibition_id,
-        "exhibition": {
-            "id": visit.exhibition.id,
-            "title": visit.exhibition.title,
-            "venue_name": visit.exhibition.venue.name if visit.exhibition.venue else "",
-            "start_date": visit.exhibition.start_date,
-            "end_date": visit.exhibition.end_date,
-            "cover_image_url": visit.exhibition.cover_image_url,
-        } if visit.exhibition else None,
+        "exhibition": (
+            {
+                "id": visit.exhibition.id,
+                "title": visit.exhibition.title,
+                "venue_name": (
+                    visit.exhibition.venue.name if visit.exhibition.venue else ""
+                ),
+                "start_date": visit.exhibition.start_date,
+                "end_date": visit.exhibition.end_date,
+                "cover_image_url": visit.exhibition.cover_image_url,
+            }
+            if visit.exhibition
+            else None
+        ),
         "visited_at": visit.visited_at,
         "reactions": [
             {
@@ -191,18 +196,18 @@ def get_visit_history(visit_id: int, db: Session = Depends(get_db)):
             for reaction in visit.reactions
         ],
     }
-    
+
     return result
 
 
 def get_visit_history_response(visit_id: int, db: Session) -> dict:
     """
     방문 기록 Response 형식으로 조회 (내부 헬퍼 함수)
-    
+
     Args:
         visit_id: 방문 기록 ID
         db: 데이터베이스 세션
-        
+
     Returns:
         dict: VisitHistoryResponse 형식
     """
@@ -211,7 +216,7 @@ def get_visit_history_response(visit_id: int, db: Session) -> dict:
             VisitHistory,
             Visitor.name.label("visitor_name"),
             Exhibition.title.label("exhibition_title"),
-            func.count(Reaction.id).label("reaction_count")
+            func.count(Reaction.id).label("reaction_count"),
         )
         .join(Visitor, VisitHistory.visitor_id == Visitor.id)
         .join(Exhibition, VisitHistory.exhibition_id == Exhibition.id)
@@ -220,15 +225,15 @@ def get_visit_history_response(visit_id: int, db: Session) -> dict:
         .group_by(VisitHistory.id, Visitor.name, Exhibition.title)
         .first()
     )
-    
+
     if not result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"방문 기록 ID {visit_id}를 찾을 수 없습니다",
         )
-    
+
     visit, visitor_name, exhibition_title, reaction_count = result
-    
+
     return {
         "id": visit.id,
         "visitor_id": visit.visitor_id,

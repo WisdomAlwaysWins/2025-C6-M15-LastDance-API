@@ -7,8 +7,8 @@ from app.schemas.tag import TagResponse
 
 if TYPE_CHECKING:
     from app.schemas.artwork import ArtworkResponse
-    from app.schemas.visitor import VisitorResponse
     from app.schemas.visit_history import VisitHistorySummary
+    from app.schemas.visitor import VisitorResponse
 
 
 class ReactionBase(BaseModel):
@@ -22,6 +22,7 @@ class ReactionBase(BaseModel):
         comment: 코멘트 (선택)
         image_url: 촬영한 작품 사진 URL (선택)
     """
+
     artwork_id: int
     visitor_id: int
     visit_id: Optional[int] = None
@@ -44,6 +45,7 @@ class ReactionCreate(BaseModel):
     Validation:
         comment와 tag_ids 중 최소 하나는 필수
     """
+
     artwork_id: int = Field(..., description="작품 ID")
     visitor_id: int = Field(..., description="관람객 ID")
     visit_id: Optional[int] = Field(None, description="방문 기록 ID")
@@ -72,6 +74,7 @@ class ReactionUpdate(BaseModel):
     Validation:
         수정 시에도 comment와 tag_ids 중 최소 하나는 필수
     """
+
     comment: Optional[str] = None
     image_url: Optional[str] = None
     tag_ids: Optional[List[int]] = None
@@ -88,7 +91,7 @@ class ReactionUpdate(BaseModel):
 class ReactionResponse(BaseModel):
     """
     작품 반응 기본 응답 (리스트용)
-    
+
     GET /reactions 리스트 조회 시 사용
 
     Attributes:
@@ -104,6 +107,7 @@ class ReactionResponse(BaseModel):
         created_at: 생성일시
         updated_at: 수정일시
     """
+
     id: int
     artwork_id: int
     artwork_title: str
@@ -123,7 +127,7 @@ class ReactionResponse(BaseModel):
 class ReactionSummary(BaseModel):
     """
     반응 요약 정보 (순환 참조 방지용)
-    
+
     VisitHistory에서 사용
 
     Attributes:
@@ -133,6 +137,7 @@ class ReactionSummary(BaseModel):
         comment: 코멘트
         created_at: 생성일시
     """
+
     id: int
     artwork_id: int
     artwork_title: str
@@ -146,7 +151,7 @@ class ReactionSummary(BaseModel):
 class ReactionDetail(BaseModel):
     """
     작품 반응 상세 응답 (상세 조회용)
-    
+
     GET /reactions/{id} 상세 조회 시 사용
 
     Attributes:
@@ -163,6 +168,7 @@ class ReactionDetail(BaseModel):
         created_at: 생성일시
         updated_at: 수정일시
     """
+
     id: int
     artwork_id: int
     artwork: "ArtworkResponse"

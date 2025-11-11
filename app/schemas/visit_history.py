@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from app.schemas.exhibition import ExhibitionSummary
 
+from app.schemas.reaction import ReactionSummary
+
 
 class VisitHistoryCreate(BaseModel):
     """
@@ -18,6 +20,7 @@ class VisitHistoryCreate(BaseModel):
     Note:
         visited_at은 서버에서 자동 생성 (현재 시각)
     """
+
     visitor_id: int = Field(..., description="관람객 ID")
     exhibition_id: int = Field(..., description="전시 ID")
 
@@ -25,7 +28,7 @@ class VisitHistoryCreate(BaseModel):
 class VisitHistoryResponse(BaseModel):
     """
     방문 기록 기본 응답 (리스트용)
-    
+
     GET /visit-histories 리스트 조회 시 사용
 
     Attributes:
@@ -37,6 +40,7 @@ class VisitHistoryResponse(BaseModel):
         visited_at: 방문 일시
         reaction_count: 해당 방문에서 작성한 반응 개수
     """
+
     id: int
     visitor_id: int
     visitor_name: Optional[str] = None
@@ -52,7 +56,7 @@ class VisitHistoryResponse(BaseModel):
 class VisitHistorySummary(BaseModel):
     """
     방문 기록 요약 정보 (순환 참조 방지용)
-    
+
     Reaction에서 사용
 
     Attributes:
@@ -61,6 +65,7 @@ class VisitHistorySummary(BaseModel):
         exhibition_title: 전시 제목
         visited_at: 방문 일시
     """
+
     id: int
     exhibition_id: int
     exhibition_title: str
@@ -73,7 +78,7 @@ class VisitHistorySummary(BaseModel):
 class VisitHistoryDetail(BaseModel):
     """
     방문 기록 상세 응답 (상세 조회용)
-    
+
     GET /visit-histories/{id} 상세 조회 시 사용
 
     Attributes:
@@ -85,6 +90,7 @@ class VisitHistoryDetail(BaseModel):
         visited_at: 방문 일시
         reactions: 해당 방문에서 작성한 반응 목록 (요약 정보)
     """
+
     id: int
     visitor_id: int
     visitor_name: Optional[str] = None

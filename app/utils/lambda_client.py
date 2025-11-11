@@ -3,7 +3,7 @@ AWS Lambda 클라이언트
 """
 
 import json
-from typing import Any, Dict, List
+from typing import List
 
 import boto3
 
@@ -35,9 +35,7 @@ class LambdaClient:
         """
 
         payload = {
-            "body": json.dumps({
-                "image_base64": image_base64
-            }),
+            "body": json.dumps({"image_base64": image_base64}),
             "httpMethod": "POST",
         }
 
@@ -53,13 +51,13 @@ class LambdaClient:
             body = json.loads(result.get("body", "{}"))
             embedding = body.get("embedding")
             dimension = body.get("dimension")
-        
+
             if not embedding:
                 raise Exception("Lambda가 임베딩을 반환하지 않았습니다")
-        
+
             if dimension != 384:
                 raise Exception(f"잘못된 임베딩 차원: {dimension} (예상: 384)")
-        
+
             return embedding
         else:
             error_body = result.get("body", "{}")

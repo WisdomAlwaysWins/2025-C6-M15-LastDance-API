@@ -14,6 +14,7 @@ class VenueCreate(BaseModel):
         geo_lat: 위도 (선택)
         geo_lon: 경도 (선택)
     """
+
     name: str = Field(..., description="장소명")
     address: str = Field(..., description="주소")
     geo_lat: Optional[float] = Field(None, description="위도")
@@ -30,6 +31,7 @@ class VenueUpdate(BaseModel):
         geo_lat: 위도 (선택)
         geo_lon: 경도 (선택)
     """
+
     name: Optional[str] = None
     address: Optional[str] = None
     geo_lat: Optional[float] = None
@@ -49,6 +51,7 @@ class VenueResponse(BaseModel):
         created_at: 생성일시
         updated_at: 수정일시
     """
+
     id: int
     name: str
     address: str

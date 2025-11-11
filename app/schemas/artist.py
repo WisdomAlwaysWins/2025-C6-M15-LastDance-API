@@ -16,6 +16,7 @@ class ArtistCreate(BaseModel):
     Note:
         uuid는 서버에서 자동 생성
     """
+
     name: str = Field(..., description="작가명")
     bio: Optional[str] = Field(None, description="작가 소개")
     email: Optional[EmailStr] = Field(None, description="이메일")
@@ -30,6 +31,7 @@ class ArtistUpdate(BaseModel):
         bio: 작가 소개 (선택)
         email: 이메일 (선택)
     """
+
     name: Optional[str] = None
     bio: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -48,6 +50,7 @@ class ArtistResponse(BaseModel):
         created_at: 생성일시
         updated_at: 수정일시
     """
+
     id: int
     uuid: str
     name: str

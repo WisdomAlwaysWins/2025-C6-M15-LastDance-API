@@ -13,7 +13,6 @@ from app.models.visit_history import VisitHistory
 from app.schemas.reaction import (
     ReactionDetail,
     ReactionResponse,
-    ReactionUpdate,
 )
 from app.utils.s3_client import s3_client
 from fastapi import (
@@ -59,7 +58,7 @@ def get_reactions(
     query = db.query(Reaction).options(
         joinedload(Reaction.artwork),
         joinedload(Reaction.visitor),
-        joinedload(Reaction.tags).joinedload(Tag.category)
+        joinedload(Reaction.tags).joinedload(Tag.category),
     )
 
     # 필터링
@@ -71,29 +70,31 @@ def get_reactions(
         query = query.filter(Reaction.visit_id == visit_id)
 
     reactions = query.order_by(Reaction.created_at.desc()).all()
-    
+
     # ReactionResponse 형식으로 변환
     result = []
     for reaction in reactions:
-        result.append({
-            "id": reaction.id,
-            "artwork_id": reaction.artwork_id,
-            "artwork_title": reaction.artwork.title if reaction.artwork else "",
-            "visitor_id": reaction.visitor_id,
-            "visitor_name": reaction.visitor.name if reaction.visitor else None,
-            "visit_id": reaction.visit_id,
-            "comment": reaction.comment,
-            "image_url": reaction.image_url,
-            "tags": reaction.tags,
-            "created_at": reaction.created_at,
-            "updated_at": reaction.updated_at,
-        })
-    
+        result.append(
+            {
+                "id": reaction.id,
+                "artwork_id": reaction.artwork_id,
+                "artwork_title": reaction.artwork.title if reaction.artwork else "",
+                "visitor_id": reaction.visitor_id,
+                "visitor_name": reaction.visitor.name if reaction.visitor else None,
+                "visit_id": reaction.visit_id,
+                "comment": reaction.comment,
+                "image_url": reaction.image_url,
+                "tags": reaction.tags,
+                "created_at": reaction.created_at,
+                "updated_at": reaction.updated_at,
+            }
+        )
+
     return result
 
 
 @router.get(
-    "/{reaction_id}", 
+    "/{reaction_id}",
     response_model=ReactionDetail,
     summary="반응 상세 조회",
     description="반응 ID로 상세 정보를 조회합니다. 작품, 관람객, 방문 기록, 태그 전체 정보 포함.",
@@ -117,56 +118,70 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
             joinedload(Reaction.artwork).joinedload(Artwork.artist),
             joinedload(Reaction.visitor),
             joinedload(Reaction.visit).joinedload(VisitHistory.exhibition),
-            joinedload(Reaction.tags).joinedload(Tag.category)
+            joinedload(Reaction.tags).joinedload(Tag.category),
         )
         .filter(Reaction.id == reaction_id)
         .first()
     )
-    
+
     if not reaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
-    
+
     # ReactionDetail 형식으로 변환
     result = {
         "id": reaction.id,
         "artwork_id": reaction.artwork_id,
-        "artwork": {
-            "id": reaction.artwork.id,
-            "title": reaction.artwork.title,
-            "artist_id": reaction.artwork.artist_id,
-            "artist_name": reaction.artwork.artist.name if reaction.artwork.artist else "",
-            "description": reaction.artwork.description,
-            "year": reaction.artwork.year,
-            "thumbnail_url": reaction.artwork.thumbnail_url,
-            "reaction_count": len(reaction.artwork.reactions) if reaction.artwork else 0,
-            "created_at": reaction.artwork.created_at,
-            "updated_at": reaction.artwork.updated_at,
-        } if reaction.artwork else None,
+        "artwork": (
+            {
+                "id": reaction.artwork.id,
+                "title": reaction.artwork.title,
+                "artist_id": reaction.artwork.artist_id,
+                "artist_name": (
+                    reaction.artwork.artist.name if reaction.artwork.artist else ""
+                ),
+                "description": reaction.artwork.description,
+                "year": reaction.artwork.year,
+                "thumbnail_url": reaction.artwork.thumbnail_url,
+                "reaction_count": (
+                    len(reaction.artwork.reactions) if reaction.artwork else 0
+                ),
+                "created_at": reaction.artwork.created_at,
+                "updated_at": reaction.artwork.updated_at,
+            }
+            if reaction.artwork
+            else None
+        ),
         "visitor_id": reaction.visitor_id,
         "visitor": reaction.visitor,
         "visit_id": reaction.visit_id,
-        "visit": {
-            "id": reaction.visit.id,
-            "exhibition_id": reaction.visit.exhibition_id,
-            "exhibition_title": reaction.visit.exhibition.title if reaction.visit.exhibition else "",
-            "visited_at": reaction.visit.visited_at,
-        } if reaction.visit else None,
+        "visit": (
+            {
+                "id": reaction.visit.id,
+                "exhibition_id": reaction.visit.exhibition_id,
+                "exhibition_title": (
+                    reaction.visit.exhibition.title if reaction.visit.exhibition else ""
+                ),
+                "visited_at": reaction.visit.visited_at,
+            }
+            if reaction.visit
+            else None
+        ),
         "comment": reaction.comment,
         "image_url": reaction.image_url,
         "tags": reaction.tags,
         "created_at": reaction.created_at,
         "updated_at": reaction.updated_at,
     }
-    
+
     return result
 
 
 @router.post(
-    "", 
-    response_model=ReactionDetail, 
+    "",
+    response_model=ReactionDetail,
     status_code=status.HTTP_201_CREATED,
     summary="반응 생성",
     description="새 반응을 생성합니다. 이미지 업로드 및 태그 연결 포함.",
@@ -240,7 +255,7 @@ async def create_reaction(
             file=image,
             folder="reactions",
             exhibition_id=exhibition_id,  # visit_id가 있으면 전시 ID 전달
-            visitor_id=visitor_id,        # 관람객 ID 전달
+            visitor_id=visitor_id,  # 관람객 ID 전달
         )
         logger.info(f"S3 업로드 성공: {image_url}")
     except Exception as e:
@@ -291,7 +306,7 @@ async def create_reaction(
 
 
 @router.put(
-    "/{reaction_id}", 
+    "/{reaction_id}",
     response_model=ReactionDetail,
     summary="반응 수정",
     description="반응의 코멘트, 이미지, 태그를 수정합니다. 이미지 수정 시 기존 S3 이미지는 삭제됩니다.",
@@ -301,7 +316,7 @@ async def update_reaction(
     comment: Optional[str] = Form(None),
     tag_ids: Optional[str] = Form(None),
     image: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     반응 수정 (이미지 교체 포함)
@@ -329,7 +344,7 @@ async def update_reaction(
         .filter(Reaction.id == reaction_id)
         .first()
     )
-    
+
     if not reaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -350,14 +365,14 @@ async def update_reaction(
                 logger.info(f"기존 이미지 삭제 성공: {old_image_url}")
             except Exception as e:
                 logger.warning(f"기존 이미지 삭제 실패 (계속 진행): {e}")
-        
+
         # 새 이미지 업로드
         try:
             # visit 정보로부터 exhibition_id 추출
             exhibition_id = None
             if reaction.visit:
                 exhibition_id = reaction.visit.exhibition_id
-            
+
             new_image_url = await s3_client.upload_file(
                 file=image,
                 folder="reactions",
@@ -409,13 +424,13 @@ async def update_reaction(
 
     db.commit()
     db.refresh(reaction)
-    
+
     # 수정 후 상세 정보 조회하여 반환
     return get_reaction(reaction_id, db)
 
 
 @router.delete(
-    "/{reaction_id}", 
+    "/{reaction_id}",
     status_code=204,
     summary="반응 삭제",
     description="반응을 삭제합니다. 연결된 S3 이미지도 함께 삭제됩니다.",
@@ -423,21 +438,20 @@ async def update_reaction(
 async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
     반응 삭제 (촬영한 이미지도 함께 삭제)
-    
+
     Args:
         reaction_id: 반응 ID
-        
+
     Raises:
         404: 반응을 찾을 수 없음
-        
+
     Note:
         S3에 저장된 이미지도 함께 삭제됩니다
     """
     reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
     if not reaction:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="반응을 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="반응을 찾을 수 없습니다"
         )
 
     # S3에서 이미지 삭제 (있는 경우)
@@ -451,7 +465,7 @@ async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     # DB에서 반응 삭제
     db.delete(reaction)
     db.commit()
-    
+
     logger.info(f"Reaction ID {reaction_id} 삭제 완료")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

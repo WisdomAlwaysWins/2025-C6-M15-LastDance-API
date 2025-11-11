@@ -4,33 +4,7 @@ LastDance API Pydantic Schemas
 모든 API Request/Response 스키마 정의
 """
 
-# 1️⃣ 의존성 없는 기본 스키마들
-from app.schemas.venue import VenueCreate, VenueResponse, VenueUpdate
 from app.schemas.artist import ArtistCreate, ArtistResponse, ArtistUpdate
-from app.schemas.visitor import VisitorCreate, VisitorResponse, VisitorUpdate
-
-# 2️⃣ TagCategory (TagResponse보다 먼저)
-from app.schemas.tag_category import (
-    TagCategoryBase,
-    TagCategoryCreate,
-    TagCategoryDetail,
-    TagCategoryResponse,
-    TagCategoryUpdate,
-)
-
-# 3️⃣ Tag (TagCategoryBase 사용)
-from app.schemas.tag import TagCreate, TagDetail, TagResponse, TagUpdate
-
-# 4️⃣ Exhibition (ArtworkSummary, ExhibitionSummary 포함)
-from app.schemas.exhibition import (
-    ArtistSummary,
-    ArtworkSummary,
-    ExhibitionCreate,
-    ExhibitionDetail,
-    ExhibitionResponse,
-    ExhibitionSummary,
-    ExhibitionUpdate,
-)
 
 # 5️⃣ Artwork (ExhibitionSummary 사용)
 from app.schemas.artwork import (
@@ -43,12 +17,15 @@ from app.schemas.artwork import (
     ArtworkUpdate,
 )
 
-# 6️⃣ VisitHistory (VisitHistorySummary 포함)
-from app.schemas.visit_history import (
-    VisitHistoryCreate,
-    VisitHistoryDetail,
-    VisitHistoryResponse,
-    VisitHistorySummary,
+# 4️⃣ Exhibition (ArtworkSummary, ExhibitionSummary 포함)
+from app.schemas.exhibition import (
+    ArtistSummary,
+    ArtworkSummary,
+    ExhibitionCreate,
+    ExhibitionDetail,
+    ExhibitionResponse,
+    ExhibitionSummary,
+    ExhibitionUpdate,
 )
 
 # 7️⃣ Reaction (ReactionSummary 포함)
@@ -59,6 +36,30 @@ from app.schemas.reaction import (
     ReactionSummary,
     ReactionUpdate,
 )
+
+# 3️⃣ Tag (TagCategoryBase 사용)
+from app.schemas.tag import TagCreate, TagDetail, TagResponse, TagUpdate
+
+# 2️⃣ TagCategory (TagResponse보다 먼저)
+from app.schemas.tag_category import (
+    TagCategoryBase,
+    TagCategoryCreate,
+    TagCategoryDetail,
+    TagCategoryResponse,
+    TagCategoryUpdate,
+)
+
+# 1️⃣ 의존성 없는 기본 스키마들
+from app.schemas.venue import VenueCreate, VenueResponse, VenueUpdate
+
+# 6️⃣ VisitHistory (VisitHistorySummary 포함)
+from app.schemas.visit_history import (
+    VisitHistoryCreate,
+    VisitHistoryDetail,
+    VisitHistoryResponse,
+    VisitHistorySummary,
+)
+from app.schemas.visitor import VisitorCreate, VisitorResponse, VisitorUpdate
 
 # 8️⃣ Forward Reference 해결
 TagCategoryResponse.model_rebuild()

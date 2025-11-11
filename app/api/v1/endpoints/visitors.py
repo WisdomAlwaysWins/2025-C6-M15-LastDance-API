@@ -57,7 +57,7 @@ def get_visitor(visitor_id: int, db: Session = Depends(get_db)):
 
 
 @router.get(
-    "/uuid/{uuid}", 
+    "/uuid/{uuid}",
     response_model=VisitorResponse,
     summary="UUID로 관람객 조회",
     description="iOS UUID로 관람객 정보를 조회합니다.",

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 class ArtworkSummary(BaseModel):
     """
     작품 요약 정보 (순환 참조 방지용)
-    
+
     Exhibition에서 사용
 
     Attributes:
@@ -20,6 +20,7 @@ class ArtworkSummary(BaseModel):
         year: 제작 연도
         thumbnail_url: 썸네일 URL
     """
+
     id: int
     title: str
     artist_name: str
@@ -32,13 +33,14 @@ class ArtworkSummary(BaseModel):
 
 class ArtistSummary(BaseModel):
     """작가 요약 정보 (Exhibition에서 사용)"""
+
     id: int
     name: str
-    
+
     class Config:
         from_attributes = True
 
-        
+
 class ExhibitionCreate(BaseModel):
     """
     전시 생성 요청
@@ -52,6 +54,7 @@ class ExhibitionCreate(BaseModel):
         cover_image_url: 포스터 이미지 URL (선택)
         artwork_ids: 전시할 작품 ID 목록 (선택)
     """
+
     title: str = Field(..., description="전시 제목")
     description_text: Optional[str] = Field(None, description="전시 설명")
     start_date: date = Field(..., description="시작일")
@@ -74,6 +77,7 @@ class ExhibitionUpdate(BaseModel):
         cover_image_url: 포스터 이미지 URL (선택)
         artwork_ids: 전시 작품 ID 목록 (선택)
     """
+
     title: Optional[str] = None
     description_text: Optional[str] = None
     start_date: Optional[date] = None
@@ -86,7 +90,7 @@ class ExhibitionUpdate(BaseModel):
 class ExhibitionResponse(BaseModel):
     """
     전시 기본 응답 (리스트용)
-    
+
     GET /exhibitions 리스트 조회 시 사용
 
     Attributes:
@@ -101,6 +105,7 @@ class ExhibitionResponse(BaseModel):
         created_at: 생성일시
         updated_at: 수정일시
     """
+
     id: int
     title: str
     description_text: Optional[str] = None
@@ -120,7 +125,7 @@ class ExhibitionResponse(BaseModel):
 class ExhibitionSummary(BaseModel):
     """
     전시 요약 정보 (순환 참조 방지용)
-    
+
     다른 스키마에서 사용 (Artwork, VisitHistory 등)
 
     Attributes:
@@ -131,6 +136,7 @@ class ExhibitionSummary(BaseModel):
         end_date: 종료일
         cover_image_url: 포스터 이미지 URL
     """
+
     id: int
     title: str
     venue_name: str
@@ -145,7 +151,7 @@ class ExhibitionSummary(BaseModel):
 class ExhibitionDetail(BaseModel):
     """
     전시 상세 응답 (상세 조회용)
-    
+
     GET /exhibitions/{id} 상세 조회 시 사용
 
     Attributes:
@@ -162,6 +168,7 @@ class ExhibitionDetail(BaseModel):
         created_at: 생성일시
         updated_at: 수정일시
     """
+
     id: int
     title: str
     description_text: Optional[str] = None

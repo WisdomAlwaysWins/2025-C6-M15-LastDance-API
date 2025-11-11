@@ -161,7 +161,7 @@ def seed_database():
         db.commit()
         logger.info(f"{len(exhibitions)}개 전시 생성 완료")
 
-# 6. Artwork 생성
+        # 6. Artwork 생성
         logger.info("작품 생성 중...")
         artworks = [
             # 전시1: 인상주의 걸작전
@@ -200,7 +200,6 @@ def seed_database():
                 year=1876,
                 thumbnail_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/test/test-server-impressionism/artworks/degas-absinthe.jpg",
             ),
-            
             # 전시2: 모네와 친구들
             Artwork(
                 title="Woman With Parasol",
@@ -230,7 +229,6 @@ def seed_database():
                 year=1894,
                 thumbnail_url="https://ada-lastdance-bucket.s3.ap-southeast-2.amazonaws.com/test/test-server-impressionism/artworks/monet-rouen-cathedral.jpg",
             ),
-            
             # 전시3: 인상주의의 일상
             Artwork(
                 title="Girls At Piano",
@@ -271,33 +269,39 @@ def seed_database():
 
         # 전시1: 인상주의 걸작전 (작품 0-4)
         db.execute(
-            exhibition_artworks.insert().values([
-                {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[0].id},
-                {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[1].id},
-                {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[2].id},
-                {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[3].id},
-                {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[4].id},
-            ])
+            exhibition_artworks.insert().values(
+                [
+                    {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[0].id},
+                    {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[1].id},
+                    {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[2].id},
+                    {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[3].id},
+                    {"exhibition_id": exhibitions[0].id, "artwork_id": artworks[4].id},
+                ]
+            )
         )
 
         # 전시2: 모네와 친구들 (작품 5-8)
         db.execute(
-            exhibition_artworks.insert().values([
-                {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[5].id},
-                {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[6].id},
-                {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[7].id},
-                {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[8].id},
-            ])
+            exhibition_artworks.insert().values(
+                [
+                    {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[5].id},
+                    {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[6].id},
+                    {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[7].id},
+                    {"exhibition_id": exhibitions[1].id, "artwork_id": artworks[8].id},
+                ]
+            )
         )
 
         # 전시3: 인상주의의 일상 (작품 9-12)
         db.execute(
-            exhibition_artworks.insert().values([
-                {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[9].id},
-                {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[10].id},
-                {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[11].id},
-                {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[12].id},
-            ])
+            exhibition_artworks.insert().values(
+                [
+                    {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[9].id},
+                    {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[10].id},
+                    {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[11].id},
+                    {"exhibition_id": exhibitions[2].id, "artwork_id": artworks[12].id},
+                ]
+            )
         )
 
         db.commit()

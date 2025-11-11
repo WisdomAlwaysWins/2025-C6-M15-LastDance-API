@@ -10,12 +10,13 @@ if TYPE_CHECKING:
 class TagCategoryBase(BaseModel):
     """
     태그 카테고리 기본 정보 (순환 참조 방지용)
-    
+
     Attributes:
         id: 카테고리 ID
         name: 카테고리명
         color_hex: 색상 코드
     """
+
     id: int
     name: str
     color_hex: Optional[str] = None
@@ -32,6 +33,7 @@ class TagCategoryCreate(BaseModel):
         name: 카테고리명 (예: 감동이에요, 아름다워요)
         color_hex: 색상 코드 (선택, #RRGGBB 형식)
     """
+
     name: str = Field(..., description="카테고리명")
     color_hex: Optional[str] = Field(
         None, pattern="^#[0-9A-Fa-f]{6}$", description="색상 코드"
@@ -46,6 +48,7 @@ class TagCategoryUpdate(BaseModel):
         name: 카테고리명 (선택)
         color_hex: 색상 코드 (선택)
     """
+
     name: Optional[str] = None
     color_hex: Optional[str] = Field(None, pattern="^#[0-9A-Fa-f]{6}$")
 
@@ -62,6 +65,7 @@ class TagCategoryResponse(BaseModel):
         updated_at: 수정일시
         tags: 해당 카테고리의 태그 목록
     """
+
     id: int
     name: str
     color_hex: Optional[str] = None
@@ -79,8 +83,9 @@ class TagCategoryDetail(TagCategoryResponse):
 
     Attributes:
         tags: 해당 카테고리의 태그 목록
-    
+
     Note: 부모 클래스에서 상속
     """
+
     class Config:
         from_attributes = True
