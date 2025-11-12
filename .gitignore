@@ -41,3 +41,7 @@ uploads/
 temp/
 
 tests/
+
+# APNs Keys
+apns_keys/
+*.p8
