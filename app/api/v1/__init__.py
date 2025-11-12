@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     venues,
     visit_histories,
     visitors,
+    device,
 )
 from fastapi import APIRouter
 
@@ -24,4 +25,5 @@ api_router.include_router(tags.router)
 api_router.include_router(venues.router)
 api_router.include_router(visit_histories.router)
 api_router.include_router(visitors.router)
+api_router.include_router(device.router)
 api_router.include_router(upload.router)

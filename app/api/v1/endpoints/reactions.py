@@ -2,6 +2,11 @@
 import json
 import logging
 from typing import List, Optional
+from fastapi import BackgroundTasks
+from app.database import SessionLocal
+from app.models.exhibition import Exhibition
+from app.utils.notification_helper import notify_reaction_to_artist, notify_artist_reply_to_visitor
+from datetime import datetime
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -187,6 +192,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     description="새 반응을 생성합니다. 이미지 업로드 및 태그 연결 포함.",
 )
 async def create_reaction(
+    background_tasks: BackgroundTasks,
     visitor_id: int = Form(...),
     artwork_id: int = Form(...),
     visit_id: Optional[int] = Form(None),
@@ -302,7 +308,49 @@ async def create_reaction(
             )
 
     # 생성 후 상세 정보 조회하여 반환
-    return get_reaction(new_reaction.id, db)
+    result = get_reaction(new_reaction.id, db)
+    
+    # 백그라운드에서 작가에게 푸시 전송 ✅
+    if artwork and artwork.artist:
+        # 전시 정보 찾기
+        exhibition = None
+        
+        # 1. visit_id로 전시 찾기
+        if visit_id and visit:
+            exhibition = (
+                db.query(Exhibition)
+                .filter(Exhibition.id == visit.exhibition_id)
+                .first()
+            )
+        
+        # 2. visit_id 없으면 작품의 첫 번째 전시 사용
+        if not exhibition:
+            artwork_with_exhibitions = (
+                db.query(Artwork)
+                .options(joinedload(Artwork.exhibitions))
+                .filter(Artwork.id == artwork_id)
+                .first()
+            )
+            if artwork_with_exhibitions and artwork_with_exhibitions.exhibitions:
+                exhibition = artwork_with_exhibitions.exhibitions[0]
+        
+        # 3. 전시 정보 있으면 푸시 전송
+        if exhibition:
+            background_tasks.add_task(
+                notify_reaction_to_artist,
+                db=SessionLocal(),
+                artist_id=artwork.artist.id,
+                exhibition_title=exhibition.title,
+                artwork_title=artwork.title,
+                reaction_id=new_reaction.id,
+                artwork_id=artwork.id,
+                created_at=new_reaction.created_at,
+            )
+            logger.info(
+                f"작가 ID {artwork.artist.id}에게 푸시 알림 예약 (전시: {exhibition.title})"
+            )
+    
+    return result
 
 
 @router.put(
@@ -469,3 +517,52 @@ async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     logger.info(f"Reaction ID {reaction_id} 삭제 완료")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# 테스트용 푸시 알림 메서드
+@router.post(
+    "/test-artist-reply-notification",
+    summary="[테스트] 작가 이모지 답글 알림 테스트",
+    description="DB 수정 없이 visitor에게 푸시 알림만 테스트합니다.",
+)
+async def test_artist_reply_notification(
+    visitor_id: int = Form(..., description="알림 받을 visitor ID"),
+    exhibition_title: str = Form(default="테스트 전시회", description="전시 제목"),
+    db: Session = Depends(get_db),
+):
+    """작가 이모지 답글 알림 테스트 (DB 변경 없음)"""
+    from app.models.visitor import Visitor
+    
+    # Visitor 존재 여부 확인
+    visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
+    if not visitor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
+        )
+    
+    try:
+        await notify_artist_reply_to_visitor(
+            db=db,
+            visitor_id=visitor_id,
+            exhibition_title=exhibition_title,
+            reaction_id=999,
+            reply_created_at=datetime.utcnow(),
+        )
+        
+        logger.info(
+            f"[테스트] Visitor ID {visitor_id}에게 작가 답글 알림 전송 성공"
+        )
+        
+        return {
+            "success": True,
+            "message": f"Visitor ID {visitor_id}에게 알림 전송 완료",
+            "exhibition_title": exhibition_title,
+        }
+        
+    except Exception as e:
+        logger.error(f"[테스트] 푸시 전송 실패: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"푸시 알림 전송 실패: {str(e)}"
+        )

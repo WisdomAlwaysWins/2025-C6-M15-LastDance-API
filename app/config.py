@@ -34,6 +34,21 @@ class Settings(BaseSettings):
     # Admin API Key
     ADMIN_API_KEY: str
 
+    # APNs (Apple Push Notification) 설정
+    APNS_TEAM_ID: str
+    APNS_BUNDLE_ID: str
+
+    # Sandbox (개발용)
+    APNS_SANDBOX_KEY_PATH: str
+    APNS_SANDBOX_KEY_ID: str
+
+    # Production (배포용)
+    APNS_PRODUCTION_KEY_PATH: str
+    APNS_PRODUCTION_KEY_ID: str
+
+    # 현재 사용 환경
+    APNS_USE_SANDBOX: bool = True
+
     class Config:
         env_file = ".env"
         case_sensitive = True
