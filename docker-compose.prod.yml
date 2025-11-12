@@ -49,8 +49,17 @@ services:
       # 환경 설정
       ENVIRONMENT: ${ENVIRONMENT:-test}
     
-      # Admin API Key (추가!)
+      # Admin API Key 
       ADMIN_API_KEY: ${ADMIN_API_KEY}
+
+      # APNs
+      APNS_TEAM_ID: ${APNS_TEAM_ID}
+      APNS_BUNDLE_ID: ${APNS_BUNDLE_ID}
+      APNS_SANDBOX_KEY_PATH: ${APNS_SANDBOX_KEY_PATH}
+      APNS_SANDBOX_KEY_ID: ${APNS_SANDBOX_KEY_ID}
+      APNS_PRODUCTION_KEY_PATH: ${APNS_PRODUCTION_KEY_PATH}
+      APNS_PRODUCTION_KEY_ID: ${APNS_PRODUCTION_KEY_ID}
+      APNS_USE_SANDBOX: ${APNS_USE_SANDBOX}
     
     ports:
       - "8000:8000"
@@ -78,8 +87,9 @@ services:
         done &&
         echo '✅ Database is ready!' &&
         echo '🗃️  Running migrations...' &&
+        alembic upgrade head &&  # ✅ Migration 추가!
         echo '🚀 Starting API server...' &&
-          uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level warning
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level warning
       "
 
 volumes:
