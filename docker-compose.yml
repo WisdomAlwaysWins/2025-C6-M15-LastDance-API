@@ -58,6 +58,7 @@ services:
       - ./app:/app/app
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
+      - ./apns_keys:/app/apns_keys
     
     depends_on:
       db:
