@@ -1,5 +1,6 @@
 from app.models.artist import Artist
 from app.models.artwork import Artwork
+from app.models.device import Device
 from app.models.exhibition import Exhibition, exhibition_artworks
 from app.models.reaction import Reaction, reaction_tags
 from app.models.tag import Tag
@@ -20,4 +21,5 @@ __all__ = [
     "VisitHistory",
     "TagCategory",
     "Tag",
+    "Device",
 ]

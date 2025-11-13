@@ -1,6 +1,5 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 # from app.api.deps import verify_api_key
@@ -15,6 +14,7 @@ from app.schemas.device import (
     NotificationSendRequest,
 )
 from app.utils.apns_client import get_apns_client
+from fastapi import APIRouter, Depends, HTTPException, status
 
 logger = logging.getLogger(__name__)
 

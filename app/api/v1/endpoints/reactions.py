@@ -1,17 +1,14 @@
 # app/api/v1/endpoints/reactions.py
+from datetime import datetime
 import json
 import logging
 from typing import List, Optional
-from fastapi import BackgroundTasks
-from app.database import SessionLocal
-from app.models.exhibition import Exhibition
-from app.utils.notification_helper import notify_reaction_to_artist, notify_artist_reply_to_visitor
-from datetime import datetime
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.models.artwork import Artwork
+from app.models.exhibition import Exhibition
 from app.models.reaction import Reaction
 from app.models.tag import Tag
 from app.models.visit_history import VisitHistory
@@ -19,9 +16,14 @@ from app.schemas.reaction import (
     ReactionDetail,
     ReactionResponse,
 )
+from app.utils.notification_helper import (
+    notify_artist_reply_to_visitor,
+    notify_reaction_to_artist,
+)
 from app.utils.s3_client import s3_client
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
@@ -532,7 +534,7 @@ async def test_artist_reply_notification(
 ):
     """작가 이모지 답글 알림 테스트 (DB 변경 없음)"""
     from app.models.visitor import Visitor
-    
+
     # Visitor 존재 여부 확인
     visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:

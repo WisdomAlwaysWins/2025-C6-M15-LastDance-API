@@ -2,6 +2,7 @@
 from app.api.v1.endpoints import (
     artists,
     artworks,
+    device,
     exhibitions,
     reactions,
     tag_categories,
@@ -10,7 +11,6 @@ from app.api.v1.endpoints import (
     venues,
     visit_histories,
     visitors,
-    device,
 )
 from fastapi import APIRouter
 
