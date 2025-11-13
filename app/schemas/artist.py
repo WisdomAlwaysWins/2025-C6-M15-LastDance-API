@@ -112,7 +112,6 @@ class ArtistPublicResponse(BaseModel):
     
     Attributes:
         id: 작가 ID
-        uuid: 작가 UUID
         name: 작가명
         bio: 작가 소개
         email: 이메일
@@ -120,7 +119,6 @@ class ArtistPublicResponse(BaseModel):
         updated_at: 수정일시
     """
     id: int
-    uuid: str
     name: str
     bio: Optional[str] = None
     email: Optional[str] = None
