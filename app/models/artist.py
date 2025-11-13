@@ -25,6 +25,10 @@ class Artist(Base):
     name = Column(String, nullable=False, index=True)
     bio = Column(String, nullable=True)
     email = Column(String, nullable=True)
+
+    login_code = Column(String(6), unique=True, nullable=True, index=True)
+    login_code_created_at = Column(DateTime(timezone=True))
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
