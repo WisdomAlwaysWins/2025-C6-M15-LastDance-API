@@ -8,6 +8,7 @@ from app.models.tag_category import TagCategory
 from app.models.venue import Venue
 from app.models.visit_history import VisitHistory
 from app.models.visitor import Visitor
+from app.models.artist_reaction_emoji import ArtistReactionEmoji 
 
 __all__ = [
     "Visitor",
@@ -22,4 +23,5 @@ __all__ = [
     "TagCategory",
     "Tag",
     "Device",
+    "ArtistReactionEmoji",
 ]

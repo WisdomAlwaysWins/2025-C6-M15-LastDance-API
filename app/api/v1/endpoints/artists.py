@@ -13,6 +13,8 @@ from app.schemas.artist import (
     ArtistUpdate,
     ArtistLoginRequest,  
     ArtistLoginResponse,  
+    ArtistPublicResponse,
+
 )
 from app.utils.code_generator import generate_login_code  
 from app.config import settings
@@ -22,9 +24,9 @@ router = APIRouter(prefix="/artists", tags=["Artists"])
 
 @router.get(
     "",
-    response_model=List[ArtistResponse],
+    response_model=List[ArtistPublicResponse],
     summary="작가 목록 조회",
-    description="작가 목록을 조회합니다.",
+    description="작가 목록을 조회합니다. (login_code 제외)",
 )
 def get_artists(db: Session = Depends(get_db)):
     """
@@ -39,23 +41,12 @@ def get_artists(db: Session = Depends(get_db)):
 
 @router.get(
     "/{artist_id}",
-    response_model=ArtistResponse,
+    response_model=ArtistPublicResponse,
     summary="작가 상세 조회",
-    description="작가 ID로 상세 정보를 조회합니다.",
+    description="작가 ID로 상세 정보를 조회합니다. (login_code 제외)",
 )
 def get_artist(artist_id: int, db: Session = Depends(get_db)):
-    """
-    작가 상세 조회
-
-    Args:
-        artist_id: 작가 ID
-
-    Returns:
-        ArtistResponse: 작가 정보
-
-    Raises:
-        404: 작가를 찾을 수 없음
-    """
+    """작가 상세 조회 (공개 정보만)"""
     artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
         raise HTTPException(
@@ -65,20 +56,12 @@ def get_artist(artist_id: int, db: Session = Depends(get_db)):
     return artist
 
 
-@router.get("/uuid/{uuid}", response_model=ArtistResponse)
+@router.get(
+    "/uuid/{uuid}", 
+    response_model=ArtistPublicResponse 
+)
 def get_artist_by_uuid(uuid: str, db: Session = Depends(get_db)):
-    """
-    작가 UUID로 조회
-
-    Args:
-        uuid: 작가 UUID
-
-    Returns:
-        ArtistResponse: 작가 정보
-
-    Raises:
-        404: 작가를 찾을 수 없음
-    """
+    """작가 UUID로 조회 (공개 정보만)"""
     artist = db.query(Artist).filter(Artist.uuid == uuid).first()
     if not artist:
         raise HTTPException(
@@ -185,7 +168,7 @@ def login_artist(
 
 @router.put(
     "/{artist_id}",
-    response_model=ArtistResponse,
+    response_model=ArtistPublicResponse,
     summary="작가 수정",
     description="작가 정보를 수정합니다. (관리자 전용, API Key 필요)",
 )

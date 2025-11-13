@@ -32,7 +32,16 @@ from fastapi import (
     Response,
     UploadFile,
     status,
+    Header,
 )
+
+from app.models.artist import Artist
+from app.models.artist_reaction_emoji import ArtistReactionEmoji
+from app.schemas.artist_reaction_emoji import (
+    ArtistReactionEmojiCreate,
+    ArtistReactionEmojiResponse,
+)
+from app.constants.emojis import is_valid_emoji_type
 
 router = APIRouter(prefix="/reactions", tags=["Reactions"])
 
@@ -104,20 +113,11 @@ def get_reactions(
     "/{reaction_id}",
     response_model=ReactionDetail,
     summary="반응 상세 조회",
-    description="반응 ID로 상세 정보를 조회합니다. 작품, 관람객, 방문 기록, 태그 전체 정보 포함.",
+    description="반응 ID로 상세 정보를 조회합니다. 작품, 관람객, 방문 기록, 태그, 작가 이모지 포함.",
 )
 def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
     반응 상세 조회 (전체 정보)
-
-    Args:
-        reaction_id: 반응 ID
-
-    Returns:
-        ReactionDetail: 반응 상세 정보 (artwork, visitor, visit, tags 포함)
-
-    Raises:
-        404: 반응을 찾을 수 없음
     """
     reaction = (
         db.query(Reaction)
@@ -126,6 +126,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
             joinedload(Reaction.visitor),
             joinedload(Reaction.visit).joinedload(VisitHistory.exhibition),
             joinedload(Reaction.tags).joinedload(Tag.category),
+            joinedload(Reaction.artist_emojis).joinedload(ArtistReactionEmoji.artist), 
         )
         .filter(Reaction.id == reaction_id)
         .first()
@@ -136,6 +137,17 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
+
+    # ✨ 작가 이모지 포맷팅
+    artist_emojis = []
+    for emoji in reaction.artist_emojis:
+        artist_emojis.append({
+            "id": emoji.id,
+            "artist_id": emoji.artist_id,
+            "artist_name": emoji.artist.name if emoji.artist else "",
+            "emoji_type": emoji.emoji_type,
+            "created_at": emoji.created_at,
+        })
 
     # ReactionDetail 형식으로 변환
     result = {
@@ -179,6 +191,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
         "comment": reaction.comment,
         "image_url": reaction.image_url,
         "tags": reaction.tags,
+        "artist_emojis": artist_emojis, 
         "created_at": reaction.created_at,
         "updated_at": reaction.updated_at,
     }
@@ -312,7 +325,7 @@ async def create_reaction(
     # 생성 후 상세 정보 조회하여 반환
     result = get_reaction(new_reaction.id, db)
     
-    # 백그라운드에서 작가에게 푸시 전송 ✅
+    # 백그라운드에서 작가에게 푸시 전송
     if artwork and artwork.artist:
         # 전시 정보 찾기
         exhibition = None
@@ -568,3 +581,115 @@ async def test_artist_reply_notification(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"푸시 알림 전송 실패: {str(e)}"
         )
+    
+
+# 작가 이모지 남기기 (UUID 사용)
+@router.post(
+    "/{reaction_id}/artist-emoji",
+    response_model=ArtistReactionEmojiResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="작가 이모지 남기기",
+    description="작가가 관람객의 반응에 이모지를 남깁니다.",
+)
+def create_artist_emoji(
+    reaction_id: int,
+    emoji_data: ArtistReactionEmojiCreate,
+    db: Session = Depends(get_db),
+    x_artist_uuid: str = Header(..., alias="X-Artist-UUID"),  # UUID 사용!
+):
+    """
+    작가 이모지 생성
+    
+    Args:
+        reaction_id: 반응 ID
+        emoji_data: 이모지 데이터
+        x_artist_uuid: 작가 UUID (헤더)
+    """
+    # UUID로 작가 조회
+    artist = db.query(Artist).filter(Artist.uuid == x_artist_uuid).first()
+    if not artist:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="작가를 찾을 수 없습니다"
+        )
+    
+    # 반응 존재 확인
+    reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
+    if not reaction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다"
+        )
+    
+    # 이모지 타입 검증
+    if not is_valid_emoji_type(emoji_data.emoji_type):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"허용되지 않은 이모지 타입입니다"
+        )
+    
+    # 이미 이모지를 남겼는지 확인
+    existing_emoji = db.query(ArtistReactionEmoji).filter(
+        ArtistReactionEmoji.artist_id == artist.id,
+        ArtistReactionEmoji.reaction_id == reaction_id
+    ).first()
+    
+    if existing_emoji:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 이 반응에 이모지를 남겼습니다"
+        )
+    
+    # 이모지 생성
+    new_emoji = ArtistReactionEmoji(
+        artist_id=artist.id,
+        reaction_id=reaction_id,
+        emoji_type=emoji_data.emoji_type,
+    )
+    
+    db.add(new_emoji)
+    db.commit()
+    db.refresh(new_emoji)
+    
+    return new_emoji
+
+
+# 작가 이모지 삭제 (UUID 사용)
+@router.delete(
+    "/{reaction_id}/artist-emoji",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="작가 이모지 삭제",
+    description="작가가 자신이 남긴 이모지를 삭제합니다.",
+)
+def delete_artist_emoji(
+    reaction_id: int,
+    db: Session = Depends(get_db),
+    x_artist_uuid: str = Header(..., alias="X-Artist-UUID"),  # UUID 사용
+):
+    """
+    작가 이모지 삭제
+    """
+    # UUID로 작가 조회
+    artist = db.query(Artist).filter(Artist.uuid == x_artist_uuid).first()
+    if not artist:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="작가를 찾을 수 없습니다"
+        )
+    
+    # 이모지 조회
+    emoji = db.query(ArtistReactionEmoji).filter(
+        ArtistReactionEmoji.artist_id == artist.id,
+        ArtistReactionEmoji.reaction_id == reaction_id
+    ).first()
+    
+    if not emoji:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="이모지를 찾을 수 없습니다"
+        )
+    
+    db.delete(emoji)
+    db.commit()
+    
+    return None

@@ -34,6 +34,7 @@ class Reaction(Base):
     visitor = relationship("Visitor", back_populates="reactions")
     visit = relationship("VisitHistory", back_populates="reactions")
     tags = relationship("Tag", secondary=reaction_tags, back_populates="reactions")
+    artist_emojis = relationship("ArtistReactionEmoji", back_populates="reaction", cascade="all, delete-orphan") 
 
     def __repr__(self):
         return f"<Reaction(id={self.id}, artwork_id={self.artwork_id}, visitor_id={self.visitor_id})>"

@@ -104,3 +104,28 @@ class ArtistLoginResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ArtistPublicResponse(BaseModel):
+    """
+    작가 공개 응답 (login_code 제외)
+    
+    Attributes:
+        id: 작가 ID
+        uuid: 작가 UUID
+        name: 작가명
+        bio: 작가 소개
+        email: 이메일
+        created_at: 생성일시
+        updated_at: 수정일시
+    """
+    id: int
+    uuid: str
+    name: str
+    bio: Optional[str] = None
+    email: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

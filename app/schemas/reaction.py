@@ -148,6 +148,18 @@ class ReactionSummary(BaseModel):
         from_attributes = True
 
 
+class ArtistReactionEmojiInReaction(BaseModel):
+    """반응에 포함되는 작가 이모지 정보"""
+    id: int
+    artist_id: int
+    artist_name: str
+    emoji_type: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
 class ReactionDetail(BaseModel):
     """
     작품 반응 상세 응답 (상세 조회용)
@@ -165,6 +177,7 @@ class ReactionDetail(BaseModel):
         comment: 코멘트
         image_url: 촬영한 작품 사진 URL
         tags: 선택한 태그 목록
+        artist_emojis: 작가가 남긴 이모지들
         created_at: 생성일시
         updated_at: 수정일시
     """
@@ -179,6 +192,7 @@ class ReactionDetail(BaseModel):
     comment: Optional[str] = None
     image_url: Optional[str] = None
     tags: List[TagResponse] = []
+    artist_emojis: List[ArtistReactionEmojiInReaction] = []
     created_at: datetime
     updated_at: Optional[datetime] = None
 
