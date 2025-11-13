@@ -39,7 +39,7 @@ class ArtistUpdate(BaseModel):
 
 class ArtistResponse(BaseModel):
     """
-    작가 기본 응답
+    작가 기본 응답 (Admin 전용 - login_code 포함)
 
     Attributes:
         id: 작가 ID (Integer)
@@ -87,7 +87,7 @@ class ArtistLoginRequest(BaseModel):
 
 class ArtistLoginResponse(BaseModel):
     """
-    작가 로그인 응답
+    작가 로그인 응답 (uuid 포함!) -> 여기만 UUID 제공
 
     Attributes:
         id: 작가 ID
@@ -108,7 +108,7 @@ class ArtistLoginResponse(BaseModel):
 
 class ArtistPublicResponse(BaseModel):
     """
-    작가 공개 응답 (login_code 제외)
+    작가 공개 응답 (login_code, uuid 제외) 
     
     Attributes:
         id: 작가 ID
