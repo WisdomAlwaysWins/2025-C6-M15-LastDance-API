@@ -41,6 +41,12 @@ from app.schemas.artist_reaction_emoji import (
     ArtistReactionEmojiCreate,
     ArtistReactionEmojiResponse,
 )
+from app.models.artist_reaction_message import ArtistReactionMessage
+from app.schemas.artist_reaction_message import (
+    ArtistReactionMessageCreate,
+    ArtistReactionMessageResponse,
+)
+
 from app.constants.emojis import is_valid_emoji_type
 
 router = APIRouter(prefix="/reactions", tags=["Reactions"])
@@ -113,7 +119,7 @@ def get_reactions(
     "/{reaction_id}",
     response_model=ReactionDetail,
     summary="반응 상세 조회",
-    description="반응 ID로 상세 정보를 조회합니다. 작품, 관람객, 방문 기록, 태그, 작가 이모지 포함.",
+    description="반응 ID로 상세 정보를 조회합니다. 작품, 관람객, 방문 기록, 태그, 작가 이모지, 작가 메시지 포함",
 )
 def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
@@ -127,6 +133,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
             joinedload(Reaction.visit).joinedload(VisitHistory.exhibition),
             joinedload(Reaction.tags).joinedload(Tag.category),
             joinedload(Reaction.artist_emojis).joinedload(ArtistReactionEmoji.artist), 
+            joinedload(Reaction.artist_messages).joinedload(ArtistReactionMessage.artist), 
         )
         .filter(Reaction.id == reaction_id)
         .first()
@@ -138,7 +145,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
             detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
 
-    # ✨ 작가 이모지 포맷팅
+    # 작가 이모지 포맷팅
     artist_emojis = []
     for emoji in reaction.artist_emojis:
         artist_emojis.append({
@@ -147,6 +154,17 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
             "artist_name": emoji.artist.name if emoji.artist else "",
             "emoji_type": emoji.emoji_type,
             "created_at": emoji.created_at,
+        })
+
+    # 작가 메시지 포맷팅(오래된 순)
+    artist_messages = []
+    for message in sorted(reaction.artist_messages, key=lambda x: x.created_at):
+        artist_messages.append({
+            "id": message.id,
+            "artist_id": message.artist_id,
+            "artist_name": message.artist.name if message.artist else "",
+            "message": message.message,
+            "created_at": message.created_at,
         })
 
     # ReactionDetail 형식으로 변환
@@ -192,6 +210,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
         "image_url": reaction.image_url,
         "tags": reaction.tags,
         "artist_emojis": artist_emojis, 
+        "artist_messages": artist_messages,
         "created_at": reaction.created_at,
         "updated_at": reaction.updated_at,
     }
@@ -693,3 +712,100 @@ def delete_artist_emoji(
     db.commit()
     
     return None
+
+
+@router.post(
+    "/{reaction_id}/artist-messages",
+    response_model=ArtistReactionMessageResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="작가 메시지 보내기",
+    description="작가가 관람객의 반응에 메시지를 보냅니다. (10자 이내, 여러 번 가능)",
+)
+def create_artist_message(
+    reaction_id: int,
+    message_data: ArtistReactionMessageCreate,
+    db: Session = Depends(get_db),
+    x_artist_uuid: str = Header(..., alias="X-Artist-UUID"),
+):
+    """
+    작가 메시지 생성
+    
+    Args:
+        reaction_id: 반응 ID
+        message_data: 메시지 데이터
+        x_artist_uuid: 작가 UUID (헤더)
+    
+    Returns:
+        생성된 메시지 정보
+    
+    Raises:
+        401: 인증 실패
+        404: 반응 또는 작가를 찾을 수 없음
+        400: 메시지 길이 초과
+    """
+    # UUID로 작가 조회
+    artist = db.query(Artist).filter(Artist.uuid == x_artist_uuid).first()
+    if not artist:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="작가를 찾을 수 없습니다"
+        )
+    
+    # 반응 존재 확인
+    reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
+    if not reaction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다"
+        )
+    
+    # 메시지 생성
+    new_message = ArtistReactionMessage(
+        artist_id=artist.id,
+        reaction_id=reaction_id,
+        message=message_data.message,
+    )
+    
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+    
+    return new_message
+
+
+@router.get(
+    "/{reaction_id}/artist-messages",
+    response_model=List[ArtistReactionMessageResponse],
+    summary="작가 메시지 목록 조회",
+    description="특정 반응에 달린 작가 메시지들을 조회합니다. (시간순 정렬)",
+)
+def get_artist_messages(
+    reaction_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    작가 메시지 목록 조회
+    
+    Args:
+        reaction_id: 반응 ID
+    
+    Returns:
+        메시지 목록 (오래된 순)
+    
+    Raises:
+        404: 반응을 찾을 수 없음
+    """
+    # 반응 존재 확인
+    reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
+    if not reaction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다"
+        )
+    
+    # 메시지 조회 (오래된 순)
+    messages = db.query(ArtistReactionMessage).filter(
+        ArtistReactionMessage.reaction_id == reaction_id
+    ).order_by(ArtistReactionMessage.created_at.asc()).all()
+    
+    return messages

@@ -159,7 +159,18 @@ class ArtistReactionEmojiInReaction(BaseModel):
     class Config:
         from_attributes = True
 
+class ArtistReactionMessageInReaction(BaseModel):
+    """반응에 포함되는 작가 메시지 정보"""
+    id: int
+    artist_id: int
+    artist_name: str
+    message: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
 
+        
 class ReactionDetail(BaseModel):
     """
     작품 반응 상세 응답 (상세 조회용)
@@ -193,6 +204,7 @@ class ReactionDetail(BaseModel):
     image_url: Optional[str] = None
     tags: List[TagResponse] = []
     artist_emojis: List[ArtistReactionEmojiInReaction] = []
+    artist_messages: List[ArtistReactionMessageInReaction] = []
     created_at: datetime
     updated_at: Optional[datetime] = None
 
