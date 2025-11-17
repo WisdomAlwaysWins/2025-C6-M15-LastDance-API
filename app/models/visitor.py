@@ -25,7 +25,12 @@ class Visitor(Base):
     reactions = relationship(
         "Reaction", back_populates="visitor", cascade="all, delete-orphan"
     )
-    devices = relationship("Device", back_populates="visitor", cascade="all, delete-orphan")
+    devices = relationship(
+        "Device", back_populates="visitor", cascade="all, delete-orphan"
+    )
+    invitation_interests = relationship(
+        "InvitationInterest", back_populates="visitor", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Visitor(id={self.id}, uuid={self.uuid}, name={self.name})>"

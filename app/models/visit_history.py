@@ -15,6 +15,7 @@ class VisitHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     visitor_id = Column(Integer, ForeignKey("visitors.id"), nullable=False)
     exhibition_id = Column(Integer, ForeignKey("exhibitions.id"), nullable=False)
+    invitation_id = Column(Integer, ForeignKey("invitations.id"), nullable=True)
     visited_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

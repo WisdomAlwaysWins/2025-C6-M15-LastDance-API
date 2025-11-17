@@ -10,6 +10,7 @@ from app.models.visit_history import VisitHistory
 from app.models.visitor import Visitor
 from app.models.artist_reaction_emoji import ArtistReactionEmoji 
 from app.models.artist_reaction_message import ArtistReactionMessage 
+from app.models.invitation import Invitation
 
 __all__ = [
     "Visitor",
@@ -26,4 +27,5 @@ __all__ = [
     "Device",
     "ArtistReactionEmoji",
     "ArtistReactionMessage",
+    "Invitation",
 ]
