@@ -610,11 +610,12 @@ async def test_artist_reply_notification(
     summary="작가 이모지 남기기",
     description="작가가 관람객의 반응에 이모지를 남깁니다.",
 )
-def create_artist_emoji(
+async def create_artist_emoji(
     reaction_id: int,
     emoji_data: ArtistReactionEmojiCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    x_artist_uuid: str = Header(..., alias="X-Artist-UUID"),  # UUID 사용!
+    x_artist_uuid: str = Header(..., alias="X-Artist-UUID"),
 ):
     """
     작가 이모지 생성
@@ -632,8 +633,16 @@ def create_artist_emoji(
             detail="작가를 찾을 수 없습니다"
         )
     
-    # 반응 존재 확인
-    reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
+    # 반응 존재 확인 + joinedload로 관련 정보 가져오기
+    reaction = (
+        db.query(Reaction)
+        .options(
+            joinedload(Reaction.visit).joinedload(VisitHistory.exhibition),
+            joinedload(Reaction.artwork)
+        )
+        .filter(Reaction.id == reaction_id)
+        .first()
+    )
     if not reaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -669,6 +678,21 @@ def create_artist_emoji(
     db.add(new_emoji)
     db.commit()
     db.refresh(new_emoji)
+    
+    # 관객에게 푸시 알림 전송 (백그라운드)
+    if reaction.visit and reaction.visit.exhibition:
+        background_tasks.add_task(
+            notify_artist_reply_to_visitor,
+            db=SessionLocal(),
+            visitor_id=reaction.visitor_id,
+            exhibition_title=reaction.visit.exhibition.title,
+            reaction_id=reaction.id,
+            reply_created_at=new_emoji.created_at,
+        )
+        logger.info(
+            f"관객 ID {reaction.visitor_id}에게 이모지 응답 푸시 알림 예약 "
+            f"(전시: {reaction.visit.exhibition.title})"
+        )
     
     return new_emoji
 
@@ -721,9 +745,10 @@ def delete_artist_emoji(
     summary="작가 메시지 보내기",
     description="작가가 관람객의 반응에 메시지를 보냅니다. (10자 이내, 여러 번 가능)",
 )
-def create_artist_message(
+async def create_artist_message(
     reaction_id: int,
     message_data: ArtistReactionMessageCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     x_artist_uuid: str = Header(..., alias="X-Artist-UUID"),
 ):
@@ -751,8 +776,16 @@ def create_artist_message(
             detail="작가를 찾을 수 없습니다"
         )
     
-    # 반응 존재 확인
-    reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
+    # 반응 존재 확인 + joinedload로 관련 정보 가져오기
+    reaction = (
+        db.query(Reaction)
+        .options(
+            joinedload(Reaction.visit).joinedload(VisitHistory.exhibition),
+            joinedload(Reaction.artwork)
+        )
+        .filter(Reaction.id == reaction_id)
+        .first()
+    )
     if not reaction:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -769,6 +802,21 @@ def create_artist_message(
     db.add(new_message)
     db.commit()
     db.refresh(new_message)
+    
+    # 관객에게 푸시 알림 전송 (백그라운드)
+    if reaction.visit and reaction.visit.exhibition:
+        background_tasks.add_task(
+            notify_artist_reply_to_visitor,
+            db=SessionLocal(),
+            visitor_id=reaction.visitor_id,
+            exhibition_title=reaction.visit.exhibition.title,
+            reaction_id=reaction.id,
+            reply_created_at=new_message.created_at,
+        )
+        logger.info(
+            f"관객 ID {reaction.visitor_id}에게 메시지 응답 푸시 알림 예약 "
+            f"(전시: {reaction.visit.exhibition.title})"
+        )
     
     return new_message
 
