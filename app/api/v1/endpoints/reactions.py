@@ -553,55 +553,6 @@ async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-# 테스트용 푸시 알림 메서드
-@router.post(
-    "/test-artist-reply-notification",
-    summary="[테스트] 작가 이모지 답글 알림 테스트",
-    description="DB 수정 없이 visitor에게 푸시 알림만 테스트합니다.",
-)
-async def test_artist_reply_notification(
-    visitor_id: int = Form(..., description="알림 받을 visitor ID"),
-    exhibition_title: str = Form(default="테스트 전시회", description="전시 제목"),
-    db: Session = Depends(get_db),
-):
-    """작가 이모지 답글 알림 테스트 (DB 변경 없음)"""
-    from app.models.visitor import Visitor
-
-    # Visitor 존재 여부 확인
-    visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
-    if not visitor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
-        )
-    
-    try:
-        await notify_artist_reply_to_visitor(
-            db=db,
-            visitor_id=visitor_id,
-            exhibition_title=exhibition_title,
-            reaction_id=999,
-            reply_created_at=datetime.utcnow(),
-        )
-        
-        logger.info(
-            f"[테스트] Visitor ID {visitor_id}에게 작가 답글 알림 전송 성공"
-        )
-        
-        return {
-            "success": True,
-            "message": f"Visitor ID {visitor_id}에게 알림 전송 완료",
-            "exhibition_title": exhibition_title,
-        }
-        
-    except Exception as e:
-        logger.error(f"[테스트] 푸시 전송 실패: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"푸시 알림 전송 실패: {str(e)}"
-        )
-    
-
 # 작가 이모지 남기기 (UUID 사용)
 @router.post(
     "/{reaction_id}/artist-emoji",
