@@ -42,20 +42,25 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         body = None
         if request.method in ["POST", "PUT", "PATCH"]:
             try:
-                body_bytes = await request.body()
-                if body_bytes:
-                    body = json.loads(body_bytes.decode())
+                content_type = request.headers.get("content-type", "")
+                if "multipart/form-data" in content_type:
+                    logger.info("   Body: <multipart/form-data - file upload>")
+                    body = None
+                else:
+                    body_bytes = await request.body()
+                    if body_bytes:
+                        body = json.loads(body_bytes.decode())
 
-                # Body를 다시 읽을 수 있도록 설정
-                async def receive():
-                    return {"type": "http.request", "body": body_bytes}
+                    # Body를 다시 읽을 수 있도록 설정
+                    async def receive():
+                        return {"type": "http.request", "body": body_bytes}
 
-                request._receive = receive
+                    request._receive = receive
             except Exception as e:
                 logger.warning(f"Request Body 읽기 실패: {e}")
                 body = None
 
-        # ✨ 요청 로깅 (줄바꿈으로 깔끔하게)
+        # 요청 로깅 (줄바꿈으로 깔끔하게)
         headers = self._mask_sensitive_headers(dict(request.headers))
         
         logger.info("")  # 빈 줄
