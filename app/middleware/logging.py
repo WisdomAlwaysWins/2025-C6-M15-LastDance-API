@@ -17,7 +17,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     모든 API 요청/응답을 자동으로 로깅하는 미들웨어
     """
 
-    # 로그에서 제외하거나 마스킹할 민감한 헤더
+    # 민감한 헤더 (완전 마스킹)
     SENSITIVE_HEADERS = {
         "authorization",
         "x-api-key",
@@ -38,9 +38,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # 요청 시작
         start_time = time.time()
 
-        # ✨ Request Headers 로깅
-        headers = self._mask_sensitive_headers(dict(request.headers))
-        
         # Request Body 읽기
         body = None
         if request.method in ["POST", "PUT", "PATCH"]:
@@ -58,49 +55,34 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 logger.warning(f"Request Body 읽기 실패: {e}")
                 body = None
 
-        # 요청 정보
-        log_msg = (
-            f"[{request_time}] 📥 요청 시작 - {request.method} {request.url.path} "
-            f"- IP: {request.client.host if request.client else 'unknown'}"
-        )
-
-        # ✨ 헤더 로깅
-        if headers:
-            # 중요 헤더만 INFO 레벨에 표시
-            important_headers = {
-                k: v for k, v in headers.items() 
-                if k.lower() in ['content-type', 'user-agent', 'x-artist-uuid', 'x-user-uuid']
-            }
-            if important_headers:
-                log_msg += f" | Headers: {json.dumps(important_headers, ensure_ascii=False)}"
-            
-            # 전체 헤더는 DEBUG 레벨에만
-            logger.debug(f"Full Headers: {json.dumps(headers, ensure_ascii=False)}")
-
-        # Query Parameters 로깅
+        # ✨ 요청 로깅 (줄바꿈으로 깔끔하게)
+        headers = self._mask_sensitive_headers(dict(request.headers))
+        
+        logger.info("")  # 빈 줄
+        logger.info("=" * 80)
+        logger.info(f"📥 요청: {request.method} {request.url.path}")
+        logger.info(f"   시간: {request_time}")
+        logger.info(f"   IP: {request.client.host if request.client else 'unknown'}")
+        
+        # UUID 표시
+        uuid = headers.get("x-user-uuid") or headers.get("x-artist-uuid")
+        if uuid:
+            logger.info(f"   UUID: {uuid}")
+        
+        # Query Parameters
         if request.query_params:
             query_params = dict(request.query_params)
-            log_msg += f" | Query: {json.dumps(query_params, ensure_ascii=False)}"
+            logger.info(f"   Query: {query_params}")
 
+        # Body (간단하게)
         if body:
-            # 민감한 정보 마스킹
-            safe_body = body.copy() if isinstance(body, dict) else body
+            safe_body = self._mask_body(body)
             if isinstance(safe_body, dict):
-                if "password" in safe_body:
-                    safe_body["password"] = "***"
-                if "token" in safe_body:
-                    safe_body["token"] = "***"
-                # Base64 이미지는 길이만 표시
-                if "image_base64" in safe_body:
-                    img_len = len(safe_body["image_base64"])
-                    safe_body["image_base64"] = f"<base64_image: {img_len} bytes>"
-
-            body_str = json.dumps(safe_body, ensure_ascii=False)
-            if len(body_str) > 500:
-                body_str = body_str[:500] + "..."
-            log_msg += f" | Body: {body_str}"
-
-        logger.info(log_msg)
+                # 중요 필드만 표시
+                summary = {}
+                for key in list(safe_body.keys())[:5]:  # 최대 5개
+                    summary[key] = safe_body[key]
+                logger.info(f"   Body: {json.dumps(summary, ensure_ascii=False)}")
 
         try:
             # 실제 엔드포인트 호출
@@ -109,15 +91,12 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # 응답 시간 계산
             process_time = time.time() - start_time
 
-            # ✨ 상태 코드별 이모지
+            # ✨ 응답 로깅
             status_emoji = "✅" if response.status_code < 400 else "❌"
-
-            # 응답 정보 로깅
-            logger.info(
-                f"[{request_time}] {status_emoji} 요청 완료 - {request.method} {request.url.path} "
-                f"- 상태: {response.status_code} "
-                f"- 소요시간: {process_time:.2f}초"
-            )
+            
+            logger.info(f"{status_emoji} 응답: {response.status_code} ({process_time:.2f}초)")
+            logger.info("=" * 80)
+            logger.info("")  # 빈 줄
 
             # 응답 헤더에 처리 시간 추가
             response.headers["X-Process-Time"] = str(process_time)
@@ -127,12 +106,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             # 에러 로깅
             process_time = time.time() - start_time
-            logger.error(
-                f"[{request_time}] ❌ 요청 실패 - {request.method} {request.url.path} "
-                f"- 에러: {str(e)} "
-                f"- 소요시간: {process_time:.2f}초",
-                exc_info=True  # ✨ 스택 트레이스 포함
-            )
+            logger.error(f"❌ 에러: {str(e)[:100]} ({process_time:.2f}초)")
+            logger.error("=" * 80)
+            logger.error("")  # 빈 줄
+            logger.debug("상세 에러:", exc_info=True)
             raise
 
     def _mask_sensitive_headers(self, headers: dict) -> dict:
@@ -143,10 +120,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             
             # 완전 마스킹
             if key_lower in self.SENSITIVE_HEADERS:
-                masked[key] = "***MASKED***"
-            # 부분 마스킹 (UUID 등)
+                masked[key] = "***"
+            # 부분 마스킹 (UUID 등 - 앞뒤만)
             elif key_lower in self.PARTIAL_MASK_HEADERS:
-                if len(value) > 8:
+                if len(value) > 12:
                     masked[key] = f"{value[:8]}...{value[-4:]}"
                 else:
                     masked[key] = value
@@ -155,3 +132,23 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 masked[key] = value
         
         return masked
+
+    def _mask_body(self, body) -> dict:
+        """Body 민감 정보 마스킹"""
+        if not isinstance(body, dict):
+            return body
+            
+        safe_body = body.copy()
+        
+        # 민감 정보 마스킹
+        if "password" in safe_body:
+            safe_body["password"] = "***"
+        if "token" in safe_body:
+            safe_body["token"] = "***"
+        
+        # Base64 이미지는 길이만 표시
+        if "image_base64" in safe_body:
+            img_len = len(safe_body["image_base64"])
+            safe_body["image_base64"] = f"<{img_len} bytes>"
+        
+        return safe_body
