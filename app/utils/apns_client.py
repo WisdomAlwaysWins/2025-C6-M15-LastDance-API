@@ -19,16 +19,18 @@ class APNsClient:
     ):
         self.bundle_id = bundle_id
         self.use_sandbox = use_sandbox
+
+        key_content = Path(key_path).read_text().strip()
         
         # 🔍 초기화 정보 로깅
         logger.info(f"🔧 APNs 초기화 - Sandbox: {use_sandbox}")
         logger.info(f"   Key ID: {key_id}")
         logger.info(f"   Team ID: {team_id}")
         logger.info(f"   Bundle ID: {bundle_id}")
-        logger.info(f"   Key Path: {key_path}")
+        logger.info(f"   Key 길이: {len(key_content)} bytes")
         
         self.apns = APNs(
-            key=key_path,
+            key=key_content,
             key_id=key_id,
             team_id=team_id,
             topic=bundle_id,
