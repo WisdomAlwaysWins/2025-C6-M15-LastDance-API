@@ -323,10 +323,11 @@ def _build_invitation_public_response(invitation: Invitation, db: Session) -> In
     status_code=201,
     summary="초대장 관심 표현 (갈게요)",
     description="""
-    관객이 초대장을 보고 '갈게요' 버튼을 누를 때 호출합니다.
+    관객 또는 작가가 초대장을 보고 '갈게요' 버튼을 누를 때 호출합니다.
     
-    - 한 관객은 한 초대장에 한 번만 갈게요 가능
+    - 한 사용자는 한 초대장에 한 번만 갈게요 가능
     - 중복 시도 시 409 에러 반환
+    - 본인 전시는 갈게요 불가 (400 에러)
     - 성공 시 invitation.view_count 자동 증가
     """
 )
@@ -335,38 +336,53 @@ async def create_invitation_interest(
     db: Session = Depends(get_db),
     user_uuid: str = Header(..., alias="X-User-UUID")
 ):
-    # 1. Visitor 확인/생성
-    visitor = db.query(Visitor).filter(Visitor.uuid == user_uuid).first()
-    if not visitor:
-        visitor = Visitor(uuid=user_uuid)
-        db.add(visitor)
-        db.flush()
-    
-    # 2. 초대장 확인
+    # 1. 초대장 확인
     invitation = db.query(Invitation).filter(Invitation.id == data.invitation_id).first()
     if not invitation:
         raise HTTPException(status_code=404, detail="Invitation not found")
     
-    # 3. 중복 체크
-    existing = db.query(InvitationInterest).filter(
-        InvitationInterest.invitation_id == data.invitation_id,
-        InvitationInterest.visitor_id == visitor.id
-    ).first()
+    # 2. Visitor 또는 Artist 확인
+    visitor = db.query(Visitor).filter(Visitor.uuid == user_uuid).first()
+    artist = db.query(Artist).filter(Artist.uuid == user_uuid).first()
     
-    if existing:
+    if not visitor and not artist:
+        # 둘 다 없으면 Visitor 생성
+        visitor = Visitor(uuid=user_uuid)
+        db.add(visitor)
+        db.flush()
+    
+    # 3. 본인 전시 체크 (Artist인 경우)
+    if artist and invitation.artist_id == artist.id:
+        raise HTTPException(
+            status_code=400,
+            detail="본인의 전시에는 관심 표현을 할 수 없습니다."
+        )
+    
+    # 4. 중복 체크
+    existing = db.query(InvitationInterest).filter(
+        InvitationInterest.invitation_id == data.invitation_id
+    )
+    
+    if visitor:
+        existing = existing.filter(InvitationInterest.visitor_id == visitor.id)
+    elif artist:
+        existing = existing.filter(InvitationInterest.artist_id == artist.id)
+    
+    if existing.first():
         raise HTTPException(
             status_code=409,
             detail="이미 이 초대장에 관심을 표현했습니다."
         )
     
-    # 4. 관심 표현 생성
+    # 5. 관심 표현 생성
     interest = InvitationInterest(
         invitation_id=data.invitation_id,
-        visitor_id=visitor.id
+        visitor_id=visitor.id if visitor else None,
+        artist_id=artist.id if artist else None
     )
     db.add(interest)
     
-    # 5. view_count 증가
+    # 6. view_count 증가
     invitation.view_count += 1
     
     db.commit()
