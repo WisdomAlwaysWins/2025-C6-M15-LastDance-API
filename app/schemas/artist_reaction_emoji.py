@@ -14,14 +14,14 @@ class ArtistReactionEmojiCreate(BaseModel):
     작가 이모지 생성 요청
     
     Attributes:
-        emoji_type: 이모지 타입 (emoji_1 ~ emoji_5)
+        emoji_type: 이모지 타입 (emoji_like ~ emoji_laugh)
     """
     emoji_type: str = Field(..., description="이모지 타입")
     
     class Config:
         json_schema_extra = {
             "example": {
-                "emoji_type": "emoji_1"
+                "emoji_type": "emoji_like"
             }
         }
 
