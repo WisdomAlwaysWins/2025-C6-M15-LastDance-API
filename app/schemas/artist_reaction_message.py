@@ -12,16 +12,14 @@ class ArtistReactionMessageCreate(BaseModel):
     작가 메시지 생성 요청
     
     Attributes:
-        message: 메시지 (10자 이내)
+        message: 메시지 (길이 제한 없음)
     """
-    message: str = Field(..., min_length=1, max_length=10, description="메시지 (10자 이내)")
+    message: str = Field(..., min_length=1, description="메시지")
     
     @field_validator('message')
     @classmethod
     def validate_message_length(cls, v: str) -> str:
         """메시지 길이 검증"""
-        if len(v) > 10:
-            raise ValueError('메시지는 10자 이내여야 합니다')
         if not v.strip():
             raise ValueError('메시지는 공백만으로 구성될 수 없습니다')
         return v.strip()
@@ -29,7 +27,7 @@ class ArtistReactionMessageCreate(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "message": "감사합니다!"
+                "message": "작품에 대한 관심 감사합니다! 이 작품은 제가 2023년 여름에 완성한 작품으로..."
             }
         }
 

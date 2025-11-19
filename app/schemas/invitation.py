@@ -138,10 +138,12 @@ class InvitationInterestResponse(BaseModel):
     초대장 관심 표현 응답
     
     "갈게요" 클릭 시 응답
+    visitor_id 또는 artist_id 중 하나만 존재
     """
     id: int
     invitation_id: int
-    visitor_id: int
+    visitor_id: Optional[int] = None
+    artist_id: Optional[int] = None
     created_at: datetime
     
     class Config:

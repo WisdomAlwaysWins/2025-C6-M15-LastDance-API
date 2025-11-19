@@ -55,7 +55,7 @@ class Invitation(Base):
     )
     
     # 초대 메시지 (최대 20자)
-    message = Column(String(20), nullable=True)
+    message = Column(String(20), nullable =True)
     
     # 통계 (실제 방문한 고유 관람객 수)
     view_count = Column(Integer, default=0, nullable=False)
@@ -67,7 +67,7 @@ class Invitation(Base):
     # Relationships
     artist = relationship("Artist", back_populates="invitations")
     exhibition = relationship("Exhibition", back_populates="invitations")
-    interests = relationship("InvitationInterest", back_populates="invitation") 
+    interests = relationship("InvitationInterest", back_populates="invitation", cascade="all, delete-orphan")
     
     __table_args__ = (
         UniqueConstraint('exhibition_id', 'artist_id', name='uq_invitation_exhibition_artist'),

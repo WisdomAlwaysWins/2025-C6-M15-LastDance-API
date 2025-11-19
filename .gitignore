@@ -15,6 +15,8 @@ ENV/
 # Environment
 .env
 .env.local
+.env.production
+.env.test
 
 # IDEs
 .vscode/
@@ -45,3 +47,37 @@ tests/
 # APNs Keys
 apns_keys/
 *.p8
+
+# =====================================================
+# 데이터 관리 (추가됨)
+# =====================================================
+
+# SQL 백업 및 데이터 파일
+*.sql
+!seeds/sample_data_template.sql  # 템플릿만 Git 관리
+!alembic/versions/*.sql           # 마이그레이션 SQL은 허용
+
+# 백업 디렉토리
+backups/
+dumps/
+
+# 시드 데이터 (실제 데이터)
+seeds/actual_data.sql
+seeds/*_data.sql
+!seeds/sample_*.sql
+
+# 데이터 파일
+*.csv
+*.xlsx
+*.json
+!sample_*.json
+!**/fixtures/*.json  # 테스트 fixture는 허용
+
+# 임시 데이터
+data/
+tmp/
+*.tmp
+
+# DB 덤프
+*.dump
+*.backup

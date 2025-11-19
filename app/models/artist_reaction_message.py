@@ -2,7 +2,7 @@
 ArtistReactionMessage Model
 작가가 반응에 남긴 메시지
 """
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Index
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -16,7 +16,7 @@ class ArtistReactionMessage(Base):
     id = Column(Integer, primary_key=True, index=True)
     artist_id = Column(Integer, ForeignKey("artists.id", ondelete="CASCADE"), nullable=False)
     reaction_id = Column(Integer, ForeignKey("reactions.id", ondelete="CASCADE"), nullable=False)
-    message = Column(String(10), nullable=False)  # 10자 제한
+    message = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships

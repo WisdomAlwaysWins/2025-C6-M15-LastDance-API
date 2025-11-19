@@ -36,8 +36,9 @@ class Artist(Base):
     artworks = relationship("Artwork", back_populates="artist")
     devices = relationship("Device", back_populates="artist", cascade="all, delete-orphan")
     reaction_emojis = relationship("ArtistReactionEmoji", back_populates="artist", cascade="all, delete-orphan")
-    reaction_messages = relationship("ArtistReactionMessage", back_populates="artist", cascade="all, delete-orphan") 
-    invitations = relationship("Invitation", back_populates="artist", cascade="all, delete-orphan") 
+    reaction_messages = relationship("ArtistReactionMessage", back_populates="artist", cascade="all, delete-orphan")
+    invitations = relationship("Invitation", back_populates="artist", cascade="all, delete-orphan")
+    invitation_interests = relationship("InvitationInterest", back_populates="artist", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Artist(id={self.id}, uuid={self.uuid}, name={self.name})>"

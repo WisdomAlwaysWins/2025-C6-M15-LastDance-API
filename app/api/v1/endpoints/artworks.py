@@ -484,6 +484,11 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
     3. 결과 반환
     """
     try:
+        # 매칭 시작 로깅
+        logger.info("=" * 60)
+        logger.info("🔍 작품 이미지 매칭 시작")
+        logger.info(f"   📊 요청 Threshold: {request.threshold}")
+        
         # 1. 입력 검증
         if not request.image_base64:
             raise HTTPException(
@@ -492,33 +497,33 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
             )
 
         size_mb = len(request.image_base64) / 1024 / 1024
+        logger.info(f"   🖼️  원본 이미지 크기: {size_mb:.2f}MB")
+        
         if size_mb > 50:
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=f"이미지 크기가 너무 큽니다: {size_mb:.2f}MB (최대 50MB)",
             )
 
-        logger.info(f"이미지 매칭 시작: {size_mb:.2f}MB")
-
         # 2. 조건부 리사이즈 (1MB 이하면 스킵)
         if size_mb > 1.0:
-            logger.info(f"이미지 리사이즈 시작: {size_mb:.2f}MB")
+            logger.info(f"   🔄 이미지 리사이즈 중... ({size_mb:.2f}MB)")
             resized_image = resize_base64_image_smart(
                 request.image_base64, max_size=1024
             )
             new_size_mb = len(resized_image) / 1024 / 1024
-            logger.info(f"리사이즈 완료: {size_mb:.2f}MB → {new_size_mb:.2f}MB")
+            logger.info(f"   ✅ 리사이즈 완료: {size_mb:.2f}MB → {new_size_mb:.2f}MB")
         else:
-            logger.info("리사이즈 생략 (1MB 이하)")
+            logger.info("   ✅ 리사이즈 생략 (1MB 이하)")
             resized_image = request.image_base64
 
         # 3. Lambda로 사용자 이미지 임베딩 생성
-        logger.info("Lambda 호출: 임베딩 생성 시작")
+        logger.info("   🔄 Lambda 호출 중 (임베딩 생성)...")
         user_embedding = lambda_client.generate_embedding(resized_image)
-        logger.info(f"임베딩 생성 완료: {len(user_embedding)}차원")
+        logger.info(f"   ✅ 임베딩 생성 완료: {len(user_embedding)}차원")
 
         # 4. DB에서 pgvector 유사도 검색
-        logger.info(f"DB 유사도 검색 시작 (threshold: {request.threshold})")
+        logger.info(f"   🔍 DB 유사도 검색 중 (threshold >= {request.threshold})...")
 
         # pgvector 코사인 유사도 검색
         # 1 - (embedding <=> user_embedding) = 코사인 유사도
@@ -546,7 +551,44 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
             },
         ).fetchall()
 
-        logger.info(f"유사도 검색 완료: {len(results)}개 매칭됨")
+        # 검색 결과 상세 로깅
+        logger.info(f"   📊 검색 결과: {len(results)}개 작품 매칭")
+        
+        if results:
+            # 유사도 통계
+            similarities = [float(r.similarity) for r in results]
+            max_sim = max(similarities)
+            min_sim = min(similarities)
+            avg_sim = sum(similarities) / len(similarities)
+            
+            logger.info(f"   📈 유사도 통계:")
+            logger.info(f"      - 최고: {max_sim:.4f}")
+            logger.info(f"      - 최저: {min_sim:.4f}")
+            logger.info(f"      - 평균: {avg_sim:.4f}")
+            logger.info(f"      - 범위: {min_sim:.4f} ~ {max_sim:.4f}")
+            
+            # 상위 3개 결과 로깅
+            logger.info(f"   🎯 상위 매칭 작품:")
+            for idx, r in enumerate(results[:3], 1):
+                logger.info(
+                    f"      [{idx}] {r.title} "
+                    f"(유사도: {r.similarity:.4f}, ID: {r.id})"
+                )
+            
+            # 전체 결과는 DEBUG 레벨에
+            if len(results) > 3:
+                logger.debug(f"   📋 전체 매칭 결과:")
+                for idx, r in enumerate(results, 1):
+                    logger.debug(
+                        f"      [{idx}] {r.title} - "
+                        f"유사도: {r.similarity:.4f} "
+                        f"(ID: {r.id})"
+                    )
+        else:
+            logger.warning(
+                f"   ⚠️  매칭된 작품 없음 "
+                f"(threshold {request.threshold} 이상인 작품 없음)"
+            )
 
         # 5. 결과에 상세 정보 추가
         matched_artworks = []
@@ -586,7 +628,15 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
                     }
                 )
 
-        logger.info(f"매칭 완료: 총 {len(matched_artworks)}개 작품")
+        # 최종 결과 로깅
+        logger.info("   " + "=" * 56)
+        logger.info(
+            f"   ✅ 매칭 완료: "
+            f"매칭 여부={len(matched_artworks) > 0}, "
+            f"총 {len(matched_artworks)}개, "
+            f"사용 Threshold={request.threshold}"
+        )
+        logger.info("=" * 60)
 
         return {
             "matched": len(matched_artworks) > 0,
@@ -598,7 +648,9 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"이미지 매칭 오류: {e}")
+        logger.error("=" * 60)
+        logger.error(f"❌ 작품 매칭 실패: {str(e)}", exc_info=True)
+        logger.error("=" * 60)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"이미지 매칭 중 오류가 발생했습니다: {str(e)}",
