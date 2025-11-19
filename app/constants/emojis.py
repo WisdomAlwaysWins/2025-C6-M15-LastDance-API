@@ -13,11 +13,11 @@ ALLOWED_EMOJI_TYPES = [
 
 # 이모지 설명 (문서화용)
 EMOJI_DESCRIPTIONS = {
-    "emoji_1": "하트",
-    "emoji_2": "좋아요",
-    "emoji_3": "놀람",
-    "emoji_4": "슬픔",
-    "emoji_5": "하하",
+    "emoji_emoji_heart": "하트",
+    "emoji_like": "좋아요",
+    "emoji_surprise": "놀람",
+    "emoji_sad": "슬픔",
+    "emoji_laugh": "하하",
 }
 
 

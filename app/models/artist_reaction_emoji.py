@@ -16,7 +16,7 @@ class ArtistReactionEmoji(Base):
     id = Column(Integer, primary_key=True, index=True)
     artist_id = Column(Integer, ForeignKey("artists.id", ondelete="CASCADE"), nullable=False)
     reaction_id = Column(Integer, ForeignKey("reactions.id", ondelete="CASCADE"), nullable=False)
-    emoji_type = Column(String(20), nullable=False)  # emoji_1 ~ emoji_5
+    emoji_type = Column(String(20), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
