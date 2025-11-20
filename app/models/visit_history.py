@@ -24,6 +24,7 @@ class VisitHistory(Base):
     reactions = relationship(
         "Reaction", back_populates="visit", cascade="all, delete-orphan"
     )
+    notifications = relationship("Notification", back_populates="visits")
 
     def __repr__(self):
         return f"<VisitHistory(id={self.id}, visitor_id={self.visitor_id}, exhibition_id={self.exhibition_id})>"

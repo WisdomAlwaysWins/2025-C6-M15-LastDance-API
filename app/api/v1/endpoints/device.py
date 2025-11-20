@@ -43,11 +43,13 @@ def register_device_token(data: DeviceTokenRegister, db: Session = Depends(get_d
     Raises:
         404: 존재하지 않는 visitor_id 또는 artist_id
     """
+    logger.info(f"디바이스 토큰 등록 시도: {data.device_token[:10]}...")
 
     # Visitor 존재 여부 확인
     if data.visitor_id:
         visitor = db.query(Visitor).filter(Visitor.id == data.visitor_id).first()
         if not visitor:
+            logger.warning(f"관람객 ID {data.visitor_id} 찾을 수 없음")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"관람객 ID {data.visitor_id}를 찾을 수 없습니다",
@@ -57,6 +59,7 @@ def register_device_token(data: DeviceTokenRegister, db: Session = Depends(get_d
     if data.artist_id:
         artist = db.query(Artist).filter(Artist.id == data.artist_id).first()
         if not artist:
+            logger.warning(f"작가 ID {data.artist_id} 찾을 수 없음")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"작가 ID {data.artist_id}를 찾을 수 없습니다",
@@ -77,7 +80,7 @@ def register_device_token(data: DeviceTokenRegister, db: Session = Depends(get_d
         user_type = "관람객" if data.visitor_id else "작가"
         user_id = data.visitor_id or data.artist_id
         logger.info(
-            f"디바이스 토큰 업데이트: {data.device_token[:10]}... → {user_type} {user_id}"
+            f"✅ 디바이스 토큰 업데이트: {data.device_token[:10]}... → {user_type} {user_id}"
         )
         return {"message": "디바이스 토큰 업데이트 완료"}
 
@@ -95,7 +98,7 @@ def register_device_token(data: DeviceTokenRegister, db: Session = Depends(get_d
     user_type = "관람객" if data.visitor_id else "작가"
     user_id = data.visitor_id or data.artist_id
     logger.info(
-        f"디바이스 토큰 등록: {data.device_token[:10]}... → {user_type} {user_id}"
+        f"✅ 디바이스 토큰 등록: {data.device_token[:10]}... → {user_type} {user_id} (Device ID: {device.id})"
     )
     return {"message": "디바이스 토큰 등록 완료", "device_id": device.id}
 
@@ -124,9 +127,12 @@ def update_device(
     Raises:
         404: 존재하지 않는 디바이스
     """
+    logger.info(f"디바이스 상태 변경 시도: ID {device_id}")
+    
     device = db.query(Device).filter(Device.id == device_id).first()
     
     if not device:
+        logger.warning(f"디바이스 ID {device_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="디바이스를 찾을 수 없습니다"
@@ -137,7 +143,7 @@ def update_device(
     db.refresh(device)
     
     logger.info(
-        f"디바이스 상태 변경: ID {device_id} → {'활성' if device.is_active else '비활성'}"
+        f"✅ 디바이스 상태 변경 완료: ID {device_id} → {'활성' if device.is_active else '비활성'}"
     )
     
     return device
@@ -161,9 +167,12 @@ def unregister_device_token(device_token: str, db: Session = Depends(get_db)):
     Raises:
         404: 존재하지 않는 디바이스 토큰
     """
+    logger.info(f"디바이스 토큰 비활성화 시도: {device_token[:10]}...")
+    
     device = db.query(Device).filter(Device.device_token == device_token).first()
 
     if not device:
+        logger.warning(f"디바이스 토큰 {device_token[:10]}... 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="디바이스 토큰을 찾을 수 없습니다",
@@ -172,7 +181,7 @@ def unregister_device_token(device_token: str, db: Session = Depends(get_db)):
     device.is_active = False
     db.commit()
 
-    logger.info(f"디바이스 토큰 비활성화: {device_token[:10]}...")
+    logger.info(f"✅ 디바이스 토큰 비활성화 완료: {device_token[:10]}...")
     return None
 
 
@@ -199,8 +208,11 @@ def get_visitor_devices(
     Raises:
         404: 존재하지 않는 관람객
     """
+    logger.info(f"관람객 디바이스 목록 조회: visitor_id={visitor_id}")
+    
     visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:
+        logger.warning(f"관람객 ID {visitor_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
@@ -212,6 +224,7 @@ def get_visitor_devices(
         .all()
     )
 
+    logger.info(f"✅ 디바이스 {len(devices)}개 조회 완료")
     return devices
 
 
@@ -238,8 +251,11 @@ def get_artist_devices(
     Raises:
         404: 존재하지 않는 작가
     """
+    logger.info(f"작가 디바이스 목록 조회: artist_id={artist_id}")
+    
     artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
+        logger.warning(f"작가 ID {artist_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"작가 ID {artist_id}를 찾을 수 없습니다",
@@ -251,104 +267,5 @@ def get_artist_devices(
         .all()
     )
 
+    logger.info(f"✅ 디바이스 {len(devices)}개 조회 완료")
     return devices
-
-
-@router.post(
-    "/send-notification",
-    summary="푸시 알림 전송 (테스트)",
-    description="특정 사용자 또는 디바이스에 푸시 알림을 전송합니다. (관리자 전용)",
-)
-async def send_push_notification(
-    request: NotificationSendRequest,
-    db: Session = Depends(get_db),
-    # _: bool = Depends(verify_api_key),
-):
-    """
-    푸시 알림 전송 (관리자 테스트용)
-
-    visitor_id, artist_id, device_token 중 하나는 필수입니다.
-
-    Args:
-        request: 푸시 알림 전송 요청 (validator에서 검증)
-
-    Returns:
-        dict: 전송 결과
-
-    Raises:
-        404: 등록된 디바이스 없음
-    """
-
-    apns = get_apns_client(use_sandbox=request.use_sandbox)
-    device_tokens = []
-
-    # visitor_id로 전송
-    if request.visitor_id:
-        devices = (
-            db.query(Device)
-            .filter(
-                Device.visitor_id == request.visitor_id,
-                Device.is_active == True,
-            )
-            .all()
-        )
-
-        if not devices:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"관람객 ID {request.visitor_id}의 활성 디바이스가 없습니다",
-            )
-
-        device_tokens = [device.device_token for device in devices]
-
-    # artist_id로 전송
-    elif request.artist_id:
-        devices = (
-            db.query(Device)
-            .filter(
-                Device.artist_id == request.artist_id,
-                Device.is_active == True,
-            )
-            .all()
-        )
-
-        if not devices:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"작가 ID {request.artist_id}의 활성 디바이스가 없습니다",
-            )
-
-        device_tokens = [device.device_token for device in devices]
-
-    # device_token으로 전송
-    elif request.device_token:
-        device_tokens = [request.device_token]
-
-    # 푸시 전송
-    try:
-        result = await apns.send_batch_notification(
-            device_tokens=device_tokens,
-            title=request.title,
-            body=request.body,
-            data=request.data,
-            badge=request.badge,
-        )
-
-        env = "Sandbox" if request.use_sandbox else "Production"
-        logger.info(
-            f"[{env}] 푸시 전송 완료: 성공 {result['success']}개, 실패 {result['failed']}개"
-        )
-
-        return {
-            "message": f"{len(device_tokens)}개 디바이스에 전송 요청 완료",
-            "environment": env,
-            "success_count": result["success"],
-            "failed_count": result["failed"],
-        }
-
-    except Exception as e:
-        logger.error(f"푸시 전송 실패: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"푸시 전송 중 오류 발생: {str(e)}",
-        )

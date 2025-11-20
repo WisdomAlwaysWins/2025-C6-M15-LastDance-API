@@ -1,5 +1,6 @@
 # app/api/v1/endpoints/visitors.py
 from typing import List
+import logging
 
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,7 @@ from app.schemas.visitor import VisitorCreate, VisitorResponse, VisitorUpdate
 from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter(prefix="/visitors", tags=["Visitors"])
+logger = logging.getLogger(__name__)
 
 
 @router.get(
@@ -24,7 +26,9 @@ def get_visitors(db: Session = Depends(get_db)):
     Returns:
         List[VisitorResponse]: 관람객 목록
     """
+    logger.info("관람객 목록 조회 시작")
     visitors = db.query(Visitor).order_by(Visitor.id).all()
+    logger.info(f"✅ 관람객 {len(visitors)}명 조회 완료")
     return visitors
 
 
@@ -47,12 +51,15 @@ def get_visitor(visitor_id: int, db: Session = Depends(get_db)):
     Raises:
         404: 관람객을 찾을 수 없음
     """
+    logger.info(f"관람객 상세 조회 시작: ID {visitor_id}")
     visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:
+        logger.warning(f"관람객 ID {visitor_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
         )
+    logger.info(f"✅ 관람객 조회 완료: '{visitor.name}'")
     return visitor
 
 
@@ -75,12 +82,15 @@ def get_visitor_by_uuid(uuid: str, db: Session = Depends(get_db)):
     Raises:
         404: 관람객을 찾을 수 없음
     """
+    logger.info(f"관람객 UUID 조회: {uuid[:8]}...")
     visitor = db.query(Visitor).filter(Visitor.uuid == uuid).first()
     if not visitor:
+        logger.warning(f"관람객 UUID {uuid[:8]}... 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"관람객 UUID {uuid}를 찾을 수 없습니다",
         )
+    logger.info(f"✅ 관람객 조회 완료: '{visitor.name}'")
     return visitor
 
 
@@ -104,9 +114,12 @@ def create_visitor(visitor_data: VisitorCreate, db: Session = Depends(get_db)):
     Raises:
         400: 중복된 UUID
     """
+    logger.info(f"관람객 생성 시도: UUID {visitor_data.uuid[:8]}..., 이름 '{visitor_data.name}'")
+    
     # UUID 중복 체크
     existing = db.query(Visitor).filter(Visitor.uuid == visitor_data.uuid).first()
     if existing:
+        logger.warning(f"중복 UUID: {visitor_data.uuid[:8]}...")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"관람객 UUID '{visitor_data.uuid}'이(가) 이미 존재합니다",
@@ -116,6 +129,8 @@ def create_visitor(visitor_data: VisitorCreate, db: Session = Depends(get_db)):
     db.add(new_visitor)
     db.commit()
     db.refresh(new_visitor)
+    
+    logger.info(f"✅ 관람객 생성 완료: ID {new_visitor.id}, 이름 '{new_visitor.name}'")
     return new_visitor
 
 
@@ -141,19 +156,25 @@ def update_visitor(
     Raises:
         404: 관람객을 찾을 수 없음
     """
+    logger.info(f"관람객 수정 시작: ID {visitor_id}")
+    
     visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:
+        logger.warning(f"관람객 ID {visitor_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
         )
 
+    old_name = visitor.name
     update_data = visitor_data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(visitor, key, value)
 
     db.commit()
     db.refresh(visitor)
+    
+    logger.info(f"✅ 관람객 수정 완료: ID {visitor_id}, '{old_name}' → '{visitor.name}'")
     return visitor
 
 
@@ -173,13 +194,19 @@ def delete_visitor(visitor_id: int, db: Session = Depends(get_db)):
     Raises:
         404: 관람객을 찾을 수 없음
     """
+    logger.info(f"관람객 삭제 시작: ID {visitor_id}")
+    
     visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:
+        logger.warning(f"관람객 ID {visitor_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
         )
 
+    visitor_name = visitor.name
     db.delete(visitor)
     db.commit()
+    
+    logger.info(f"✅ 관람객 삭제 완료: '{visitor_name}' (ID: {visitor_id})")
     return None
