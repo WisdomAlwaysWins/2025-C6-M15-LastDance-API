@@ -18,7 +18,7 @@ class LambdaClient:
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         )
-        self.function_name = "lastdance-embedding-generator"
+        self.function_name = settings.LAMBDA_FUNCTION_NAME
 
     def generate_embedding(self, image_base64: str) -> List[float]:
         """

@@ -40,7 +40,7 @@ jobs:
                   username: ubuntu
                   key: ${{ secrets.PROD_SERVER_SSH_KEY }}
                   script: |
-                      cd ~/lastdance-api
+                      cd ~/2025-C6-M15-LastDance-API/
                       docker-compose pull api
                       docker-compose up -d
                       echo "Production deployment completed: ${{ steps.get_version.outputs.VERSION }}"
