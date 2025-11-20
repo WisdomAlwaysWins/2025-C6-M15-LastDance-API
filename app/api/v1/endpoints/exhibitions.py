@@ -57,10 +57,13 @@ def get_exhibitions(
     Raises:
         404: 존재하지 않는 venue_id
     """
+    logger.info(f"전시 목록 조회 시작 (status={status}, venue_id={venue_id})")
+    
     # Venue 존재 여부 확인
     if venue_id:
         venue = db.query(Venue).filter(Venue.id == venue_id).first()
         if not venue:
+            logger.warning(f"전시 장소 ID {venue_id} 찾을 수 없음")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"전시 장소 ID {venue_id}를 찾을 수 없습니다",
@@ -116,6 +119,7 @@ def get_exhibitions(
             }
         )
 
+    logger.info(f"✅ 전시 {len(results)}개 조회 완료")
     return results
 
 
@@ -138,6 +142,8 @@ def get_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
     Raises:
         404: 전시를 찾을 수 없음
     """
+    logger.info(f"전시 상세 조회 시작: ID {exhibition_id}")
+    
     # 전시 조회 (관계 데이터 포함)
     exhibition = (
         db.query(Exhibition)
@@ -150,6 +156,7 @@ def get_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
     )
 
     if not exhibition:
+        logger.warning(f"전시 ID {exhibition_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"전시 ID {exhibition_id}를 찾을 수 없습니다",
@@ -190,6 +197,7 @@ def get_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
         "updated_at": exhibition.updated_at,
     }
 
+    logger.info(f"✅ 전시 '{exhibition.title}' 조회 완료 (작품 {len(exhibition.artworks)}개, 작가 {len(artists_dict)}명)")
     return result
 
 
@@ -231,8 +239,11 @@ async def create_exhibition(
         404: 존재하지 않는 venue_id 또는 artwork_ids
         500: S3 업로드 실패
     """
+    logger.info(f"전시 생성 시작: '{title}' (venue_id={venue_id}, {start_date} ~ {end_date})")
+    
     # 날짜 검증
     if start_date > end_date:
+        logger.warning(f"날짜 검증 실패: 시작일({start_date}) > 종료일({end_date})")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="시작 날짜는 종료 날짜보다 이전이어야 합니다",
@@ -241,6 +252,7 @@ async def create_exhibition(
     # Venue 존재 여부 확인
     venue = db.query(Venue).filter(Venue.id == venue_id).first()
     if not venue:
+        logger.warning(f"전시 장소 ID {venue_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"전시 장소 ID {venue_id}를 찾을 수 없습니다",
@@ -250,12 +262,13 @@ async def create_exhibition(
     cover_image_url = None
     if cover_image:
         try:
+            logger.info(f"S3 업로드 시작: {cover_image.filename}")
             cover_image_url = await s3_client.upload_file(
                 file=cover_image, folder="exhibitions"
             )
-            logger.info(f"S3 업로드 성공: {cover_image_url}")
+            logger.info(f"✅ S3 업로드 성공: {cover_image_url}")
         except Exception as e:
-            logger.error(f"S3 업로드 실패: {e}")
+            logger.error(f"❌ S3 업로드 실패: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"이미지 업로드 실패: {str(e)}",
@@ -280,6 +293,8 @@ async def create_exhibition(
 
         try:
             artwork_id_list = json.loads(artwork_ids)
+            logger.info(f"작품 연결 시도: {len(artwork_id_list)}개")
+            
             artworks = (
                 db.query(Artwork).filter(Artwork.id.in_(artwork_id_list)).all()
             )
@@ -290,6 +305,7 @@ async def create_exhibition(
                 # 생성된 Exhibition 삭제
                 db.delete(new_exhibition)
                 db.commit()
+                logger.warning(f"작품 ID {sorted(missing_ids)} 찾을 수 없음, 전시 생성 롤백")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"작품 ID {sorted(missing_ids)}를 찾을 수 없습니다",
@@ -298,14 +314,18 @@ async def create_exhibition(
             new_exhibition.artworks.extend(artworks)
             db.commit()
             db.refresh(new_exhibition)
+            logger.info(f"✅ 작품 {len(artworks)}개 연결 완료")
         except json.JSONDecodeError:
             db.delete(new_exhibition)
             db.commit()
+            logger.error("JSON 파싱 실패, 전시 생성 롤백")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="artwork_ids는 유효한 JSON 배열 문자열이어야 합니다",
             )
 
+    logger.info(f"✅ 전시 생성 완료: '{title}' (ID: {new_exhibition.id}, 장소: {venue.name})")
+    
     # 생성 후 상세 정보 조회하여 반환
     return get_exhibition(int(new_exhibition.id), db)
 
@@ -349,8 +369,11 @@ async def update_exhibition(
         404: 전시, 장소 또는 작품을 찾을 수 없음
         500: S3 업로드 실패
     """
+    logger.info(f"전시 수정 시작: ID {exhibition_id}")
+    
     exhibition = db.query(Exhibition).filter(Exhibition.id == exhibition_id).first()
     if not exhibition:
+        logger.warning(f"전시 ID {exhibition_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"전시 ID {exhibition_id}를 찾을 수 없습니다",
@@ -360,6 +383,7 @@ async def update_exhibition(
     start = start_date or exhibition.start_date
     end = end_date or exhibition.end_date
     if start > end:
+        logger.warning(f"날짜 검증 실패: 시작일({start}) > 종료일({end})")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="시작 날짜는 종료 날짜보다 이전이어야 합니다",
@@ -369,33 +393,42 @@ async def update_exhibition(
     if venue_id:
         venue = db.query(Venue).filter(Venue.id == venue_id).first()
         if not venue:
+            logger.warning(f"전시 장소 ID {venue_id} 찾을 수 없음")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"전시 장소 ID {venue_id}를 찾을 수 없습니다",
             )
 
     # 기본 필드 수정
+    updated_fields = []
     if title is not None:
         exhibition.title = title  # type: ignore
+        updated_fields.append(f"제목='{title}'")
     if description_text is not None:
         exhibition.description_text = description_text  # type: ignore
+        updated_fields.append("설명")
     if start_date is not None:
         exhibition.start_date = start_date  # type: ignore
+        updated_fields.append(f"시작일={start_date}")
     if end_date is not None:
         exhibition.end_date = end_date  # type: ignore
+        updated_fields.append(f"종료일={end_date}")
     if venue_id is not None:
         exhibition.venue_id = venue_id  # type: ignore
+        updated_fields.append(f"장소 ID={venue_id}")
 
     # 커버 이미지 교체
     if cover_image is not None:
+        logger.info(f"커버 이미지 교체 시작: {cover_image.filename}")
+        
         # 기존 S3 이미지 삭제
         old_cover_url = exhibition.cover_image_url
         if old_cover_url:
             try:
                 s3_client.delete_file(str(old_cover_url))
-                logger.info(f"기존 커버 이미지 삭제 성공: {old_cover_url}")
+                logger.info(f"✅ 기존 커버 이미지 삭제 성공")
             except Exception as e:
-                logger.warning(f"기존 커버 이미지 삭제 실패 (계속 진행): {e}")
+                logger.warning(f"⚠️  기존 커버 이미지 삭제 실패 (계속 진행): {e}")
 
         # 새 이미지 업로드
         try:
@@ -403,9 +436,10 @@ async def update_exhibition(
                 file=cover_image, folder="exhibitions"
             )
             exhibition.cover_image_url = new_cover_url  # type: ignore
-            logger.info(f"새 커버 이미지 업로드 성공: {new_cover_url}")
+            logger.info(f"✅ 새 커버 이미지 업로드 성공: {new_cover_url}")
+            updated_fields.append("커버 이미지")
         except Exception as e:
-            logger.error(f"S3 업로드 실패: {e}")
+            logger.error(f"❌ S3 업로드 실패: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"이미지 업로드 실패: {str(e)}",
@@ -417,6 +451,8 @@ async def update_exhibition(
 
         try:
             artwork_id_list = json.loads(artwork_ids)
+            logger.info(f"작품 관계 수정: {len(artwork_id_list)}개")
+            
             artworks = (
                 db.query(Artwork).filter(Artwork.id.in_(artwork_id_list)).all()
             )
@@ -424,6 +460,7 @@ async def update_exhibition(
             found_ids = {artwork.id for artwork in artworks}
             missing_ids = set(artwork_id_list) - found_ids
             if missing_ids:
+                logger.warning(f"작품 ID {sorted(missing_ids)} 찾을 수 없음")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"작품 ID {sorted(missing_ids)}를 찾을 수 없습니다",
@@ -431,7 +468,10 @@ async def update_exhibition(
 
             exhibition.artworks.clear()
             exhibition.artworks.extend(artworks)
+            updated_fields.append(f"작품 {len(artworks)}개")
+            logger.info(f"✅ 작품 관계 수정 완료: {len(artworks)}개")
         except json.JSONDecodeError:
+            logger.error("JSON 파싱 실패")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="artwork_ids는 유효한 JSON 배열 문자열이어야 합니다",
@@ -440,6 +480,8 @@ async def update_exhibition(
     db.commit()
     db.refresh(exhibition)
 
+    logger.info(f"✅ 전시 수정 완료: '{exhibition.title}' (ID: {exhibition_id}, {', '.join(updated_fields) if updated_fields else '변경 없음'})")
+    
     # 수정 후 상세 정보 조회하여 반환
     return get_exhibition(exhibition_id, db)
 
@@ -467,24 +509,29 @@ async def delete_exhibition(
     Note:
         S3에 저장된 커버 이미지도 함께 삭제됩니다
     """
+    logger.info(f"전시 삭제 시작: ID {exhibition_id}")
+    
     exhibition = db.query(Exhibition).filter(Exhibition.id == exhibition_id).first()
     if not exhibition:
+        logger.warning(f"전시 ID {exhibition_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"전시 ID {exhibition_id}를 찾을 수 없습니다",
         )
 
+    exhibition_title = exhibition.title
+    
     # S3에서 커버 이미지 삭제
     if exhibition.cover_image_url:
         try:
             s3_client.delete_file(str(exhibition.cover_image_url))
-            logger.info(f"S3 커버 이미지 삭제 성공: {exhibition.cover_image_url}")
+            logger.info(f"✅ S3 커버 이미지 삭제 성공")
         except Exception as e:
-            logger.warning(f"S3 커버 이미지 삭제 실패 (계속 진행): {e}")
+            logger.warning(f"⚠️  S3 커버 이미지 삭제 실패 (계속 진행): {e}")
 
     # DB에서 전시 삭제
     db.delete(exhibition)
     db.commit()
 
-    logger.info(f"Exhibition ID {exhibition_id} 삭제 완료")
+    logger.info(f"✅ 전시 삭제 완료: '{exhibition_title}' (ID: {exhibition_id})")
     return None

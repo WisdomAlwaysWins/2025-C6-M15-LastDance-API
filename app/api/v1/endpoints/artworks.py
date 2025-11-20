@@ -66,10 +66,13 @@ def get_artworks(
     Raises:
         404: 존재하지 않는 artist_id 또는 exhibition_id
     """
+    logger.info(f"작품 목록 조회 시작 (artist_id={artist_id}, exhibition_id={exhibition_id})")
+    
     # Artist 존재 여부 확인
     if artist_id:
         artist = db.query(Artist).filter(Artist.id == artist_id).first()
         if not artist:
+            logger.warning(f"작가 ID {artist_id} 찾을 수 없음")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"작가 ID {artist_id}를 찾을 수 없습니다",
@@ -79,6 +82,7 @@ def get_artworks(
     if exhibition_id:
         exhibition = db.query(Exhibition).filter(Exhibition.id == exhibition_id).first()
         if not exhibition:
+            logger.warning(f"전시 ID {exhibition_id} 찾을 수 없음")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"전시 ID {exhibition_id}를 찾을 수 없습니다",
@@ -122,6 +126,7 @@ def get_artworks(
             }
         )
 
+    logger.info(f"✅ 작품 {len(artworks)}개 조회 완료")
     return artworks
 
 
@@ -144,6 +149,8 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
     Raises:
         404: 작품을 찾을 수 없음
     """
+    logger.info(f"작품 상세 조회 시작: ID {artwork_id}")
+    
     # 작품 조회 (관계 데이터 포함)
     artwork = (
         db.query(Artwork)
@@ -157,6 +164,7 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
     )
 
     if not artwork:
+        logger.warning(f"작품 ID {artwork_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
@@ -187,6 +195,7 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
         "updated_at": artwork.updated_at,
     }
 
+    logger.info(f"✅ 작품 '{artwork.title}' 조회 완료 (반응 {len(artwork.reactions)}개, 전시 {len(artwork.exhibitions)}개)")
     return result
 
 
@@ -229,9 +238,12 @@ async def create_artwork(
         - 이미지는 S3 artworks 폴더에 저장
         - 임베딩은 백그라운드에서 자동 생성 (약 3초)
     """
+    logger.info(f"작품 생성 시작: '{title}' (작가 ID: {artist_id})")
+    
     # Artist 존재 여부 확인
     artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
+        logger.warning(f"작가 ID {artist_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"작가 ID {artist_id}를 찾을 수 없습니다",
@@ -239,10 +251,11 @@ async def create_artwork(
 
     # S3에 썸네일 업로드
     try:
+        logger.info(f"S3 업로드 시작: {thumbnail.filename}")
         thumbnail_url = await s3_client.upload_file(file=thumbnail, folder="artworks")
-        logger.info(f"S3 업로드 성공: {thumbnail_url}")
+        logger.info(f"✅ S3 업로드 성공: {thumbnail_url}")
     except Exception as e:
-        logger.error(f"S3 업로드 실패: {e}")
+        logger.error(f"❌ S3 업로드 실패: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"이미지 업로드 실패: {str(e)}",
@@ -261,7 +274,7 @@ async def create_artwork(
     db.refresh(new_artwork)
 
     # 백그라운드에서 임베딩 생성
-    logger.info(f"임베딩 생성 예약: Artwork ID {new_artwork.id}")
+    logger.info(f"🔄 임베딩 생성 예약: Artwork ID {new_artwork.id}")
     background_tasks.add_task(
         generate_embedding_background,
         artwork_id=int(new_artwork.id),
@@ -270,6 +283,8 @@ async def create_artwork(
         db=SessionLocal(),
     )
 
+    logger.info(f"✅ 작품 생성 완료: '{title}' (ID: {new_artwork.id}, 작가: {artist.name})")
+    
     # 생성 후 상세 정보 조회하여 반환
     return get_artwork(int(new_artwork.id), db)
 
@@ -314,8 +329,11 @@ async def update_artwork(
         - 이미지 교체 시 기존 S3 이미지 삭제
         - 이미지 교체 시 임베딩 재생성
     """
+    logger.info(f"작품 수정 시작: ID {artwork_id}")
+    
     artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
     if not artwork:
+        logger.warning(f"작품 ID {artwork_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
@@ -325,31 +343,39 @@ async def update_artwork(
     if artist_id:
         artist = db.query(Artist).filter(Artist.id == artist_id).first()
         if not artist:
+            logger.warning(f"작가 ID {artist_id} 찾을 수 없음")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"작가 ID {artist_id}를 찾을 수 없습니다",
             )
 
     # 필드 수정
+    updated_fields = []
     if title is not None:
         artwork.title = title  # type: ignore
+        updated_fields.append(f"제목='{title}'")
     if artist_id is not None:
         artwork.artist_id = artist_id  # type: ignore
+        updated_fields.append(f"작가 ID={artist_id}")
     if description is not None:
         artwork.description = description  # type: ignore
+        updated_fields.append("설명")
     if year is not None:
         artwork.year = year  # type: ignore
+        updated_fields.append(f"연도={year}")
 
     # 썸네일 이미지 교체
     if thumbnail is not None:
+        logger.info(f"썸네일 교체 시작: {thumbnail.filename}")
+        
         # 기존 S3 이미지 삭제
         old_thumbnail_url = artwork.thumbnail_url
         if old_thumbnail_url:
             try:
                 s3_client.delete_file(str(old_thumbnail_url))
-                logger.info(f"기존 썸네일 삭제 성공: {old_thumbnail_url}")
+                logger.info(f"✅ 기존 썸네일 삭제 성공")
             except Exception as e:
-                logger.warning(f"기존 썸네일 삭제 실패 (계속 진행): {e}")
+                logger.warning(f"⚠️  기존 썸네일 삭제 실패 (계속 진행): {e}")
 
         # 새 이미지 업로드
         try:
@@ -357,10 +383,11 @@ async def update_artwork(
                 file=thumbnail, folder="artworks"
             )
             artwork.thumbnail_url = new_thumbnail_url  # type: ignore
-            logger.info(f"새 썸네일 업로드 성공: {new_thumbnail_url}")
+            logger.info(f"✅ 새 썸네일 업로드 성공: {new_thumbnail_url}")
+            updated_fields.append("썸네일")
 
             # 백그라운드에서 임베딩 재생성
-            logger.info(f"임베딩 재생성 예약: Artwork ID {artwork_id}")
+            logger.info(f"🔄 임베딩 재생성 예약: Artwork ID {artwork_id}")
             background_tasks.add_task(
                 generate_embedding_background,
                 artwork_id=artwork_id,
@@ -369,7 +396,7 @@ async def update_artwork(
                 db=SessionLocal(),
             )
         except Exception as e:
-            logger.error(f"S3 업로드 실패: {e}")
+            logger.error(f"❌ S3 업로드 실패: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"이미지 업로드 실패: {str(e)}",
@@ -378,6 +405,8 @@ async def update_artwork(
     db.commit()
     db.refresh(artwork)
 
+    logger.info(f"✅ 작품 수정 완료: ID {artwork_id} ({', '.join(updated_fields) if updated_fields else '변경 없음'})")
+    
     # 수정 후 상세 정보 조회하여 반환
     return get_artwork(artwork_id, db)
 
@@ -405,26 +434,31 @@ async def delete_artwork(
     Note:
         S3에 저장된 썸네일 이미지도 함께 삭제됩니다
     """
+    logger.info(f"작품 삭제 시작: ID {artwork_id}")
+    
     artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
     if not artwork:
+        logger.warning(f"작품 ID {artwork_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
         )
 
+    artwork_title = artwork.title
+    
     # S3에서 썸네일 삭제
     if artwork.thumbnail_url:
         try:
             s3_client.delete_file(str(artwork.thumbnail_url))
-            logger.info(f"S3 썸네일 삭제 성공: {artwork.thumbnail_url}")
+            logger.info(f"✅ S3 썸네일 삭제 성공")
         except Exception as e:
-            logger.warning(f"S3 썸네일 삭제 실패 (계속 진행): {e}")
+            logger.warning(f"⚠️  S3 썸네일 삭제 실패 (계속 진행): {e}")
 
     # DB에서 작품 삭제
     db.delete(artwork)
     db.commit()
 
-    logger.info(f"Artwork ID {artwork_id} 삭제 완료")
+    logger.info(f"✅ 작품 삭제 완료: '{artwork_title}' (ID: {artwork_id})")
     return None
 
 
@@ -491,6 +525,7 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
         
         # 1. 입력 검증
         if not request.image_base64:
+            logger.warning("이미지가 제공되지 않음")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이미지가 제공되지 않았습니다.",
@@ -500,6 +535,7 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
         logger.info(f"   🖼️  원본 이미지 크기: {size_mb:.2f}MB")
         
         if size_mb > 50:
+            logger.warning(f"이미지 크기 초과: {size_mb:.2f}MB")
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=f"이미지 크기가 너무 큽니다: {size_mb:.2f}MB (최대 50MB)",
@@ -565,7 +601,6 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
             logger.info(f"      - 최고: {max_sim:.4f}")
             logger.info(f"      - 최저: {min_sim:.4f}")
             logger.info(f"      - 평균: {avg_sim:.4f}")
-            logger.info(f"      - 범위: {min_sim:.4f} ~ {max_sim:.4f}")
             
             # 상위 3개 결과 로깅
             logger.info(f"   🎯 상위 매칭 작품:")

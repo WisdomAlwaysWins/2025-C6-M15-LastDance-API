@@ -1,5 +1,6 @@
 # app/api/v1/endpoints/visit_histories.py
 from typing import List, Optional
+import logging
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
@@ -17,6 +18,7 @@ from app.schemas.visit_history import (
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 router = APIRouter(prefix="/visit-histories", tags=["Visit Histories"])
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -39,9 +41,12 @@ def create_visit_history(visit_data: VisitHistoryCreate, db: Session = Depends(g
     Raises:
         404: 존재하지 않는 visitor_id 또는 exhibition_id
     """
+    logger.info(f"방문 기록 생성 시작: visitor_id={visit_data.visitor_id}, exhibition_id={visit_data.exhibition_id}")
+    
     # Visitor 존재 여부 확인
     visitor = db.query(Visitor).filter(Visitor.id == visit_data.visitor_id).first()
     if not visitor:
+        logger.warning(f"관람객 ID {visit_data.visitor_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"관람객 ID {visit_data.visitor_id}를 찾을 수 없습니다",
@@ -52,6 +57,7 @@ def create_visit_history(visit_data: VisitHistoryCreate, db: Session = Depends(g
         db.query(Exhibition).filter(Exhibition.id == visit_data.exhibition_id).first()
     )
     if not exhibition:
+        logger.warning(f"전시 ID {visit_data.exhibition_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"전시 ID {visit_data.exhibition_id}를 찾을 수 없습니다",
@@ -62,6 +68,8 @@ def create_visit_history(visit_data: VisitHistoryCreate, db: Session = Depends(g
     db.add(new_visit)
     db.commit()
     db.refresh(new_visit)
+
+    logger.info(f"✅ 방문 기록 생성 완료: ID {new_visit.id}, 관람객 '{visitor.name}', 전시 '{exhibition.title}'")
 
     # 생성 후 상세 정보 조회하여 반환 (Response 형식)
     return get_visit_history_response(new_visit.id, db)
@@ -88,6 +96,8 @@ def get_visit_histories(
     Returns:
         List[VisitHistoryResponse]: 방문 기록 목록 (visitor_name, exhibition_title, reaction_count 포함)
     """
+    logger.info(f"방문 기록 목록 조회 시작 (visitor_id={visitor_id}, exhibition_id={exhibition_id})")
+    
     # 쿼리 구성 (visitor, exhibition, reaction_count join)
     query = (
         db.query(
@@ -124,6 +134,7 @@ def get_visit_histories(
             }
         )
 
+    logger.info(f"✅ 방문 기록 {len(visits)}개 조회 완료")
     return visits
 
 
@@ -146,6 +157,8 @@ def get_visit_history(visit_id: int, db: Session = Depends(get_db)):
     Raises:
         404: 방문 기록을 찾을 수 없음
     """
+    logger.info(f"방문 기록 상세 조회 시작: ID {visit_id}")
+    
     # 방문 기록 조회 (관계 데이터 포함)
     visit = (
         db.query(VisitHistory)
@@ -159,6 +172,7 @@ def get_visit_history(visit_id: int, db: Session = Depends(get_db)):
     )
 
     if not visit:
+        logger.warning(f"방문 기록 ID {visit_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"방문 기록 ID {visit_id}를 찾을 수 없습니다",
@@ -197,6 +211,7 @@ def get_visit_history(visit_id: int, db: Session = Depends(get_db)):
         ],
     }
 
+    logger.info(f"✅ 방문 기록 조회 완료: ID {visit_id}, 반응 {len(visit.reactions)}개")
     return result
 
 

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import List
 import uuid as uuid_lib
@@ -20,6 +21,7 @@ from app.utils.code_generator import generate_login_code
 from app.config import settings
 
 router = APIRouter(prefix="/artists", tags=["Artists"])
+logger = logging.getLogger(__name__)
 
 
 @router.get(
@@ -35,7 +37,9 @@ def get_artists(db: Session = Depends(get_db)):
     Returns:
         List[ArtistResponse]: 작가 목록
     """
+    logger.info("작가 목록 조회 시작")
     artists = db.query(Artist).order_by(Artist.id).all()
+    logger.info(f"작가 {len(artists)}명 조회 완료")
     return artists
 
 
@@ -47,12 +51,15 @@ def get_artists(db: Session = Depends(get_db)):
 )
 def get_artist(artist_id: int, db: Session = Depends(get_db)):
     """작가 상세 조회 (공개 정보만)"""
+    logger.info(f"작가 ID {artist_id} 조회 시작")
     artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
+        logger.warning(f"작가 ID {artist_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Artist with id {artist_id} not found",
         )
+    logger.info(f"작가 '{artist.name}' 조회 완료")
     return artist
 
 
@@ -62,12 +69,15 @@ def get_artist(artist_id: int, db: Session = Depends(get_db)):
 )
 def get_artist_by_uuid(uuid: str, db: Session = Depends(get_db)):
     """작가 UUID로 조회 (공개 정보만)"""
+    logger.info(f"작가 UUID {uuid[:8]}... 조회 시작")
     artist = db.query(Artist).filter(Artist.uuid == uuid).first()
     if not artist:
+        logger.warning(f"작가 UUID {uuid[:8]}... 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Artist with uuid {uuid} not found",
         )
+    logger.info(f"작가 '{artist.name}' 조회 완료")
     return artist
 
 
@@ -99,10 +109,13 @@ def create_artist(
     """
     # Admin 인증
     if x_api_key != settings.ADMIN_API_KEY:
+        logger.warning("작가 생성 시도 - 권한 없음")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="권한이 없습니다"
         )
+    
+    logger.info(f"작가 생성 시작: {artist_data.name}")
     
     # UUID 생성
     artist_uuid = str(uuid_lib.uuid4())
@@ -111,8 +124,12 @@ def create_artist(
     login_code = generate_login_code()
     
     # 중복 확인 (매우 낮은 확률이지만)
+    retry_count = 0
     while db.query(Artist).filter(Artist.login_code == login_code).first():
         login_code = generate_login_code()
+        retry_count += 1
+        if retry_count > 0:
+            logger.warning(f"로그인 코드 중복 발생, 재생성 {retry_count}회")
     
     # 작가 생성
     new_artist = Artist(
@@ -127,6 +144,8 @@ def create_artist(
     db.add(new_artist)
     db.commit()
     db.refresh(new_artist)
+    
+    logger.info(f"✅ 작가 생성 완료: {new_artist.name} (ID: {new_artist.id}, 코드: {login_code})")
     return new_artist
 
 
@@ -153,16 +172,20 @@ def login_artist(
     Raises:
         404: 유효하지 않은 로그인 코드
     """
+    logger.info(f"작가 로그인 시도: 코드 {request.login_code}")
+    
     artist = db.query(Artist).filter(
         Artist.login_code == request.login_code
     ).first()
     
     if not artist:
+        logger.warning(f"로그인 실패 - 유효하지 않은 코드: {request.login_code}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="유효하지 않은 로그인 코드입니다"
         )
     
+    logger.info(f"✅ 로그인 성공: {artist.name} (ID: {artist.id})")
     return artist
 
 
@@ -194,13 +217,17 @@ def update_artist(
     """
     # Admin 인증
     if x_api_key != settings.ADMIN_API_KEY:
+        logger.warning(f"작가 수정 시도 - 권한 없음 (ID: {artist_id})")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="권한이 없습니다"
         )
     
+    logger.info(f"작가 수정 시작: ID {artist_id}")
+    
     artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
+        logger.warning(f"작가 ID {artist_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Artist with id {artist_id} not found",
@@ -212,6 +239,8 @@ def update_artist(
 
     db.commit()
     db.refresh(artist)
+    
+    logger.info(f"✅ 작가 수정 완료: {artist.name} (ID: {artist_id})")
     return artist
 
 
@@ -238,20 +267,27 @@ def delete_artist(
     """
     # Admin 인증
     if x_api_key != settings.ADMIN_API_KEY:
+        logger.warning(f"작가 삭제 시도 - 권한 없음 (ID: {artist_id})")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="권한이 없습니다"
         )
     
+    logger.info(f"작가 삭제 시작: ID {artist_id}")
+    
     artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
+        logger.warning(f"작가 ID {artist_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"작가 ID {artist_id}를 찾을 수 없습니다",
         )
 
+    artist_name = artist.name
     db.delete(artist)
     db.commit()
+    
+    logger.info(f"✅ 작가 삭제 완료: {artist_name} (ID: {artist_id})")
     return None
 
 
@@ -283,24 +319,34 @@ def regenerate_artist_login_code(
     """
     # Admin 인증
     if x_api_key != settings.ADMIN_API_KEY:
+        logger.warning(f"로그인 코드 재생성 시도 - 권한 없음 (ID: {artist_id})")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="권한이 없습니다"
         )
     
+    logger.info(f"로그인 코드 재생성 시작: ID {artist_id}")
+    
     artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
+        logger.warning(f"작가 ID {artist_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"작가 ID {artist_id}를 찾을 수 없습니다"
         )
     
+    old_code = artist.login_code
+    
     # 새 코드 생성
     new_code = generate_login_code()
     
     # 중복 확인
+    retry_count = 0
     while db.query(Artist).filter(Artist.login_code == new_code).first():
         new_code = generate_login_code()
+        retry_count += 1
+        if retry_count > 0:
+            logger.warning(f"로그인 코드 중복 발생, 재생성 {retry_count}회")
     
     # 업데이트
     artist.login_code = new_code
@@ -309,6 +355,7 @@ def regenerate_artist_login_code(
     db.commit()
     db.refresh(artist)
     
+    logger.info(f"✅ 로그인 코드 재생성 완료: {artist.name} (ID: {artist_id}, {old_code} → {new_code})")
     return artist
 
 
@@ -336,10 +383,13 @@ def batch_generate_login_codes(
     """
     # Admin 인증
     if x_api_key != settings.ADMIN_API_KEY:
+        logger.warning("일괄 로그인 코드 생성 시도 - 권한 없음")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="권한이 없습니다"
         )
+    
+    logger.info("로그인 코드 일괄 생성 시작")
     
     # 코드가 없는 작가들 조회
     artists_without_code = db.query(Artist).filter(
@@ -347,10 +397,13 @@ def batch_generate_login_codes(
     ).all()
     
     if not artists_without_code:
+        logger.info("일괄 생성 불필요 - 모든 작가가 이미 로그인 코드 보유")
         return {
             "message": "모든 작가가 이미 로그인 코드를 가지고 있습니다",
             "count": 0
         }
+    
+    logger.info(f"로그인 코드 없는 작가 {len(artists_without_code)}명 발견")
     
     count = 0
     used_codes = set()
@@ -371,8 +424,12 @@ def batch_generate_login_codes(
         artist.login_code = new_code
         artist.login_code_created_at = datetime.now()
         count += 1
+        
+        logger.info(f"  - {artist.name} (ID: {artist.id}): {new_code}")
     
     db.commit()
+    
+    logger.info(f"✅ 로그인 코드 일괄 생성 완료: {count}명")
     
     return {
         "message": f"{count}명의 작가에게 로그인 코드를 생성했습니다",

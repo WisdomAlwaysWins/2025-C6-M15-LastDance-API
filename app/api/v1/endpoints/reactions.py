@@ -77,6 +77,8 @@ def get_reactions(
     Returns:
         List[ReactionResponse]: 반응 목록 (artwork_title, visitor_name 포함)
     """
+    logger.info(f"반응 목록 조회 시작 (artwork_id={artwork_id}, visitor_id={visitor_id}, visit_id={visit_id})")
+    
     query = db.query(Reaction).options(
         joinedload(Reaction.artwork),
         joinedload(Reaction.visitor),
@@ -112,6 +114,7 @@ def get_reactions(
             }
         )
 
+    logger.info(f"✅ 반응 {len(result)}개 조회 완료")
     return result
 
 
@@ -125,6 +128,8 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     """
     반응 상세 조회 (전체 정보)
     """
+    logger.info(f"반응 상세 조회 시작: ID {reaction_id}")
+    
     reaction = (
         db.query(Reaction)
         .options(
@@ -140,6 +145,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     )
 
     if not reaction:
+        logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
@@ -215,6 +221,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
         "updated_at": reaction.updated_at,
     }
 
+    logger.info(f"✅ 반응 조회 완료: ID {reaction_id}, 이모지 {len(artist_emojis)}개, 메시지 {len(artist_messages)}개")
     return result
 
 
@@ -258,10 +265,12 @@ async def create_reaction(
         visit_id가 있으면: reactions/{env}/exhibition_{id}/visitor_{id}_{timestamp}.jpg
         visit_id가 없으면: reactions/{uuid}.jpg
     """
+    logger.info(f"반응 생성 시작: visitor_id={visitor_id}, artwork_id={artwork_id}, visit_id={visit_id}")
 
     # Artwork 존재 여부 확인
     artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
     if not artwork:
+        logger.warning(f"작품 ID {artwork_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"작품 ID {artwork_id}를 찾을 수 없습니다",
@@ -272,6 +281,7 @@ async def create_reaction(
 
     visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:
+        logger.warning(f"관람객 ID {visitor_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"관람객 ID {visitor_id}를 찾을 수 없습니다",
@@ -282,6 +292,7 @@ async def create_reaction(
     if visit_id:
         visit = db.query(VisitHistory).filter(VisitHistory.id == visit_id).first()
         if not visit:
+            logger.warning(f"방문 기록 ID {visit_id} 찾을 수 없음")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"방문 기록 ID {visit_id}를 찾을 수 없습니다",
@@ -291,15 +302,16 @@ async def create_reaction(
 
     # S3에 이미지 업로드
     try:
+        logger.info(f"S3 업로드 시작: {image.filename}")
         image_url = await s3_client.upload_file(
             file=image,
             folder="reactions",
             exhibition_id=exhibition_id,  # visit_id가 있으면 전시 ID 전달
             visitor_id=visitor_id,  # 관람객 ID 전달
         )
-        logger.info(f"S3 업로드 성공: {image_url}")
+        logger.info(f"✅ S3 업로드 성공: {image_url}")
     except Exception as e:
-        logger.error(f"S3 업로드 실패: {e}")
+        logger.error(f"❌ S3 업로드 실패: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"이미지 업로드 실패: {str(e)}",
@@ -321,12 +333,14 @@ async def create_reaction(
     if tag_ids:
         try:
             tag_id_list = json.loads(tag_ids)
+            logger.info(f"태그 연결 시도: {len(tag_id_list)}개")
             tags = db.query(Tag).filter(Tag.id.in_(tag_id_list)).all()
 
             # 존재하지 않는 태그 확인
             found_ids = {tag.id for tag in tags}
             missing_ids = set(tag_id_list) - found_ids
             if missing_ids:
+                logger.warning(f"태그 ID {sorted(missing_ids)} 찾을 수 없음")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"태그 ID {sorted(missing_ids)}를 찾을 수 없습니다",
@@ -335,11 +349,15 @@ async def create_reaction(
             new_reaction.tags.extend(tags)
             db.commit()
             db.refresh(new_reaction)
+            logger.info(f"✅ 태그 {len(tags)}개 연결 완료")
         except json.JSONDecodeError:
+            logger.error("태그 JSON 파싱 실패")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="tag_ids는 유효한 JSON 배열 문자열이어야 합니다",
             )
+
+    logger.info(f"✅ 반응 생성 완료: ID {new_reaction.id}")
 
     # 생성 후 상세 정보 조회하여 반환
     result = get_reaction(new_reaction.id, db)
@@ -374,14 +392,15 @@ async def create_reaction(
                 notify_reaction_to_artist,
                 db=SessionLocal(),
                 artist_id=artwork.artist.id,
+                exhibition_id=exhibition.id,
                 exhibition_title=exhibition.title,
+                artwork_id=artwork.id,
                 artwork_title=artwork.title,
                 reaction_id=new_reaction.id,
-                artwork_id=artwork.id,
                 created_at=new_reaction.created_at,
             )
             logger.info(
-                f"작가 ID {artwork.artist.id}에게 푸시 알림 예약 (전시: {exhibition.title})"
+                f"🔔 작가 ID {artwork.artist.id}에게 푸시 알림 예약 (전시: '{exhibition.title}')"
             )
     
     return result
@@ -420,6 +439,8 @@ async def update_reaction(
         - 이미지를 새로 업로드하면 기존 S3 이미지는 자동 삭제됩니다
         - tag_ids는 JSON 배열 문자열로 전달 (예: "[1,2,3]")
     """
+    logger.info(f"반응 수정 시작: ID {reaction_id}")
+    
     reaction = (
         db.query(Reaction)
         .options(joinedload(Reaction.visit))
@@ -428,25 +449,31 @@ async def update_reaction(
     )
 
     if not reaction:
+        logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
 
+    updated_fields = []
+
     # comment 수정
     if comment is not None:
         reaction.comment = comment  # type: ignore
+        updated_fields.append("코멘트")
 
     # image 수정 (새 이미지 업로드 시)
     if image is not None:
+        logger.info(f"이미지 교체 시작: {image.filename}")
+        
         # 기존 S3 이미지 삭제
         old_image_url = reaction.image_url
         if old_image_url:
             try:
                 s3_client.delete_file(str(old_image_url))
-                logger.info(f"기존 이미지 삭제 성공: {old_image_url}")
+                logger.info(f"✅ 기존 이미지 삭제 성공")
             except Exception as e:
-                logger.warning(f"기존 이미지 삭제 실패 (계속 진행): {e}")
+                logger.warning(f"⚠️  기존 이미지 삭제 실패 (계속 진행): {e}")
 
         # 새 이미지 업로드
         try:
@@ -462,9 +489,10 @@ async def update_reaction(
                 visitor_id=reaction.visitor_id,
             )
             reaction.image_url = new_image_url  # type: ignore
-            logger.info(f"새 이미지 업로드 성공: {new_image_url}")
+            logger.info(f"✅ 새 이미지 업로드 성공: {new_image_url}")
+            updated_fields.append("이미지")
         except Exception as e:
-            logger.error(f"S3 업로드 실패: {e}")
+            logger.error(f"❌ S3 업로드 실패: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"이미지 업로드 실패: {str(e)}",
@@ -479,19 +507,23 @@ async def update_reaction(
             # 새 태그 추가
             if tag_ids:
                 tag_id_list = json.loads(tag_ids)
+                logger.info(f"태그 수정: {len(tag_id_list)}개")
                 tags = db.query(Tag).filter(Tag.id.in_(tag_id_list)).all()
 
                 # 존재하지 않는 태그 체크
                 found_ids = {tag.id for tag in tags}
                 missing_ids = set(tag_id_list) - found_ids
                 if missing_ids:
+                    logger.warning(f"태그 ID {sorted(missing_ids)} 찾을 수 없음")
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail=f"태그 ID {sorted(missing_ids)}를 찾을 수 없습니다",
                     )
 
                 reaction.tags.extend(tags)
+                updated_fields.append(f"태그 {len(tags)}개")
         except json.JSONDecodeError:
+            logger.error("태그 JSON 파싱 실패")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="tag_ids는 유효한 JSON 배열 문자열이어야 합니다",
@@ -499,6 +531,7 @@ async def update_reaction(
 
     # Validation: comment와 tag_ids 둘 다 비어있으면 에러
     if not reaction.comment and not reaction.tags:
+        logger.warning("코멘트와 태그 모두 비어있음")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="코멘트 또는 태그 중 하나는 필수입니다",
@@ -506,6 +539,8 @@ async def update_reaction(
 
     db.commit()
     db.refresh(reaction)
+
+    logger.info(f"✅ 반응 수정 완료: ID {reaction_id} ({', '.join(updated_fields) if updated_fields else '변경 없음'})")
 
     # 수정 후 상세 정보 조회하여 반환
     return get_reaction(reaction_id, db)
@@ -530,8 +565,11 @@ async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     Note:
         S3에 저장된 이미지도 함께 삭제됩니다
     """
+    logger.info(f"반응 삭제 시작: ID {reaction_id}")
+    
     reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
     if not reaction:
+        logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="반응을 찾을 수 없습니다"
         )
@@ -540,15 +578,15 @@ async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
     if reaction.image_url:
         try:
             s3_client.delete_file(str(reaction.image_url))
-            logger.info(f"S3 이미지 삭제 성공: {reaction.image_url}")
+            logger.info(f"✅ S3 이미지 삭제 성공")
         except Exception as e:
-            logger.warning(f"S3 이미지 삭제 실패 (계속 진행): {e}")
+            logger.warning(f"⚠️  S3 이미지 삭제 실패 (계속 진행): {e}")
 
     # DB에서 반응 삭제
     db.delete(reaction)
     db.commit()
 
-    logger.info(f"Reaction ID {reaction_id} 삭제 완료")
+    logger.info(f"✅ 반응 삭제 완료: ID {reaction_id}")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -576,9 +614,12 @@ async def create_artist_emoji(
         emoji_data: 이모지 데이터
         x_artist_uuid: 작가 UUID (헤더)
     """
+    logger.info(f"작가 이모지 생성 시도: 반응 ID {reaction_id}, 작가 UUID {x_artist_uuid[:8]}..., 이모지 {emoji_data.emoji_type}")
+    
     # UUID로 작가 조회
     artist = db.query(Artist).filter(Artist.uuid == x_artist_uuid).first()
     if not artist:
+        logger.warning(f"작가 UUID {x_artist_uuid[:8]}... 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="작가를 찾을 수 없습니다"
@@ -595,6 +636,7 @@ async def create_artist_emoji(
         .first()
     )
     if not reaction:
+        logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"반응 ID {reaction_id}를 찾을 수 없습니다"
@@ -602,6 +644,7 @@ async def create_artist_emoji(
     
     # 이모지 타입 검증
     if not is_valid_emoji_type(emoji_data.emoji_type):
+        logger.warning(f"허용되지 않은 이모지 타입: {emoji_data.emoji_type}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"허용되지 않은 이모지 타입입니다"
@@ -614,6 +657,7 @@ async def create_artist_emoji(
     ).first()
     
     if existing_emoji:
+        logger.warning(f"중복 이모지 생성 시도: 작가 '{artist.name}', 반응 ID {reaction_id}")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="이미 이 반응에 이모지를 남겼습니다"
@@ -630,20 +674,22 @@ async def create_artist_emoji(
     db.commit()
     db.refresh(new_emoji)
     
+    logger.info(f"✅ 작가 이모지 생성 완료: ID {new_emoji.id}, 작가 '{artist.name}', 반응 ID {reaction_id}, 타입 {emoji_data.emoji_type}")
+    
     # 관객에게 푸시 알림 전송 (백그라운드)
     if reaction.visit and reaction.visit.exhibition:
         background_tasks.add_task(
             notify_artist_reply_to_visitor,
             db=SessionLocal(),
             visitor_id=reaction.visitor_id,
+            exhibition_id=reaction.visit.exhibition.id,
+            visit_history_id=reaction.visit_id,
             exhibition_title=reaction.visit.exhibition.title,
+            artwork_id=reaction.artwork_id,
             reaction_id=reaction.id,
             reply_created_at=new_emoji.created_at,
         )
-        logger.info(
-            f"관객 ID {reaction.visitor_id}에게 이모지 응답 푸시 알림 예약 "
-            f"(전시: {reaction.visit.exhibition.title})"
-        )
+        logger.info(f"🔔 관객 ID {reaction.visitor_id}에게 이모지 응답 푸시 알림 예약")
     
     return new_emoji
 
@@ -663,9 +709,12 @@ def delete_artist_emoji(
     """
     작가 이모지 삭제
     """
+    logger.info(f"작가 이모지 삭제 시도: 반응 ID {reaction_id}, 작가 UUID {x_artist_uuid[:8]}...")
+    
     # UUID로 작가 조회
     artist = db.query(Artist).filter(Artist.uuid == x_artist_uuid).first()
     if not artist:
+        logger.warning(f"작가 UUID {x_artist_uuid[:8]}... 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="작가를 찾을 수 없습니다"
@@ -678,13 +727,19 @@ def delete_artist_emoji(
     ).first()
     
     if not emoji:
+        logger.warning(f"이모지 찾을 수 없음: 작가 '{artist.name}', 반응 ID {reaction_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="이모지를 찾을 수 없습니다"
         )
     
+    emoji_id = emoji.id
+    emoji_type = emoji.emoji_type
+    
     db.delete(emoji)
     db.commit()
+    
+    logger.info(f"✅ 작가 이모지 삭제 완료: ID {emoji_id}, 작가 '{artist.name}', 타입 {emoji_type}")
     
     return None
 
@@ -719,9 +774,12 @@ async def create_artist_message(
         404: 반응 또는 작가를 찾을 수 없음
         400: 메시지 길이 초과
     """
+    logger.info(f"작가 메시지 생성 시도: 반응 ID {reaction_id}, 작가 UUID {x_artist_uuid[:8]}..., 메시지 길이 {len(message_data.message)}자")
+    
     # UUID로 작가 조회
     artist = db.query(Artist).filter(Artist.uuid == x_artist_uuid).first()
     if not artist:
+        logger.warning(f"작가 UUID {x_artist_uuid[:8]}... 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="작가를 찾을 수 없습니다"
@@ -738,6 +796,7 @@ async def create_artist_message(
         .first()
     )
     if not reaction:
+        logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"반응 ID {reaction_id}를 찾을 수 없습니다"
@@ -754,19 +813,24 @@ async def create_artist_message(
     db.commit()
     db.refresh(new_message)
     
+    logger.info(f"✅ 작가 메시지 생성 완료: ID {new_message.id}, 작가 '{artist.name}', 반응 ID {reaction_id}")
+    
     # 관객에게 푸시 알림 전송 (백그라운드)
     if reaction.visit and reaction.visit.exhibition:
         background_tasks.add_task(
             notify_artist_reply_to_visitor,
             db=SessionLocal(),
             visitor_id=reaction.visitor_id,
+            exhibition_id=reaction.visit.exhibition.id,
+            visit_history_id=reaction.visit_id,
             exhibition_title=reaction.visit.exhibition.title,
+            artwork_id=reaction.artwork_id,
             reaction_id=reaction.id,
             reply_created_at=new_message.created_at,
         )
         logger.info(
-            f"관객 ID {reaction.visitor_id}에게 메시지 응답 푸시 알림 예약 "
-            f"(전시: {reaction.visit.exhibition.title})"
+            f"🔔 관객 ID {reaction.visitor_id}에게 메시지 응답 푸시 알림 예약 "
+            f"(전시: '{reaction.visit.exhibition.title}')"
         )
     
     return new_message
@@ -794,9 +858,12 @@ def get_artist_messages(
     Raises:
         404: 반응을 찾을 수 없음
     """
+    logger.info(f"작가 메시지 목록 조회: 반응 ID {reaction_id}")
+    
     # 반응 존재 확인
     reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
     if not reaction:
+        logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"반응 ID {reaction_id}를 찾을 수 없습니다"
@@ -806,5 +873,7 @@ def get_artist_messages(
     messages = db.query(ArtistReactionMessage).filter(
         ArtistReactionMessage.reaction_id == reaction_id
     ).order_by(ArtistReactionMessage.created_at.asc()).all()
+    
+    logger.info(f"✅ 작가 메시지 {len(messages)}개 조회 완료")
     
     return messages
