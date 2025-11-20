@@ -11,6 +11,7 @@ from app.models.visitor import Visitor
 from app.models.artist_reaction_emoji import ArtistReactionEmoji 
 from app.models.artist_reaction_message import ArtistReactionMessage 
 from app.models.invitation import Invitation
+from app.models.notification import Notification
 
 __all__ = [
     "Visitor",
@@ -28,4 +29,5 @@ __all__ = [
     "ArtistReactionEmoji",
     "ArtistReactionMessage",
     "Invitation",
+    "Notification",
 ]

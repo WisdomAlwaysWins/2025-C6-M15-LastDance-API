@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     visit_histories,
     visitors,
     invitations,
+    notifications,
 )
 from fastapi import APIRouter
 
@@ -29,3 +30,4 @@ api_router.include_router(visitors.router)
 api_router.include_router(invitations.router)
 api_router.include_router(device.router)
 api_router.include_router(upload.router)
+api_router.include_router(notifications.router)

@@ -32,6 +32,7 @@ class Artwork(Base):
     reactions = relationship(
         "Reaction", back_populates="artwork", cascade="all, delete-orphan"
     )
+    notifications = relationship("Notification", back_populates="artwork")
 
     def __repr__(self):
         return f"<Artwork(id={self.id}, title={self.title})>"
