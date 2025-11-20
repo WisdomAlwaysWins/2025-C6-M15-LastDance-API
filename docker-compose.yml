@@ -85,8 +85,6 @@ services:
           sleep 2
         done &&
         echo '✅ Database is ready!' &&
-        echo '🗃️  Running migrations...' &&
-        alembic upgrade head &&  # ✅ Migration 추가!
         echo '🚀 Starting API server...' &&
         uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level warning
       "
