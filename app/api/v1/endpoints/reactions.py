@@ -236,7 +236,7 @@ async def create_reaction(
     background_tasks: BackgroundTasks,
     visitor_id: int = Form(...),
     artwork_id: int = Form(...),
-    visit_id: Optional[int] = Form(None),
+    visit_id: int = Form(...),
     comment: Optional[str] = Form(None),
     tag_ids: Optional[str] = Form(None),
     image: UploadFile = File(...),
