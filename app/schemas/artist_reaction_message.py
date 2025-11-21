@@ -7,13 +7,12 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+# ============================================================================
+# Request Schemas
+# ============================================================================
+
 class ArtistReactionMessageCreate(BaseModel):
-    """
-    작가 메시지 생성 요청
-    
-    Attributes:
-        message: 메시지 (길이 제한 없음)
-    """
+    """작가 메시지 생성 요청"""
     message: str = Field(..., min_length=1, description="메시지")
     
     @field_validator('message')
@@ -32,34 +31,32 @@ class ArtistReactionMessageCreate(BaseModel):
         }
 
 
+# ============================================================================
+# Nested Schemas
+# ============================================================================
+
 class ArtistSimpleForMessage(BaseModel):
     """작가 간단 정보"""
-    id: int
-    uuid: str
-    name: str
+    id: int = Field(..., description="작가 ID")
+    uuid: str = Field(..., description="작가 UUID")
+    name: str = Field(..., description="작가명")
     
     class Config:
         from_attributes = True
 
 
+# ============================================================================
+# Response Schemas
+# ============================================================================
+
 class ArtistReactionMessageResponse(BaseModel):
-    """
-    작가 메시지 응답
-    
-    Attributes:
-        id: 메시지 ID
-        artist_id: 작가 ID
-        artist: 작가 정보 (선택)
-        reaction_id: 반응 ID
-        message: 메시지 내용
-        created_at: 생성일시
-    """
-    id: int
-    artist_id: int
-    artist: Optional[ArtistSimpleForMessage] = None
-    reaction_id: int
-    message: str
-    created_at: datetime
+    """작가 메시지 응답"""
+    id: int = Field(..., description="메시지 ID")
+    artist_id: int = Field(..., description="작가 ID")
+    artist: Optional[ArtistSimpleForMessage] = Field(None, description="작가 정보")
+    reaction_id: int = Field(..., description="반응 ID")
+    message: str = Field(..., description="메시지 내용")
+    created_at: datetime = Field(..., description="생성일시")
     
     class Config:
         from_attributes = True

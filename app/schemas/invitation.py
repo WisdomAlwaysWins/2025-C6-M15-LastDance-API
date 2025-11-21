@@ -1,7 +1,5 @@
 """
 Invitation Schemas
-
-초대장 Request/Response 스키마
 """
 from pydantic import BaseModel, Field, computed_field
 from typing import Optional
@@ -14,9 +12,9 @@ from datetime import datetime, date
 
 class ArtistInInvitation(BaseModel):
     """초대장 내 작가 정보"""
-    id: int
-    name: str
-    bio: Optional[str]
+    id: int = Field(..., description="작가 ID")
+    name: str = Field(..., description="작가명")
+    bio: Optional[str] = Field(None, description="작가 소개")
     
     class Config:
         from_attributes = True
@@ -24,10 +22,10 @@ class ArtistInInvitation(BaseModel):
 
 class VenueInInvitation(BaseModel):
     """초대장 내 장소 정보"""
-    name: str
-    address: str
-    geo_lat: Optional[float]
-    geo_lon: Optional[float]
+    name: str = Field(..., description="장소명")
+    address: str = Field(..., description="주소")
+    geo_lat: Optional[float] = Field(None, description="위도")
+    geo_lon: Optional[float] = Field(None, description="경도")
     
     class Config:
         from_attributes = True
@@ -35,13 +33,13 @@ class VenueInInvitation(BaseModel):
 
 class ExhibitionInInvitation(BaseModel):
     """초대장 내 전시 정보"""
-    id: int
-    title: str
-    description_text: Optional[str]
-    start_date: date
-    end_date: date
-    cover_image_url: Optional[str]
-    venue: VenueInInvitation
+    id: int = Field(..., description="전시 ID")
+    title: str = Field(..., description="전시 제목")
+    description_text: Optional[str] = Field(None, description="전시 설명")
+    start_date: date = Field(..., description="시작일")
+    end_date: date = Field(..., description="종료일")
+    cover_image_url: Optional[str] = Field(None, description="포스터 이미지 URL")
+    venue: VenueInInvitation = Field(..., description="장소 정보")
     
     class Config:
         from_attributes = True
@@ -52,25 +50,14 @@ class ExhibitionInInvitation(BaseModel):
 # ============================================================================
 
 class InvitationCreate(BaseModel):
-    """
-    초대장 생성 요청
-    
-    Attributes:
-        exhibition_id: 전시 ID
-        message: 초대 메시지 (최대 20자)
-    """
-    exhibition_id: int
+    """초대장 생성 요청"""
+    exhibition_id: int = Field(..., description="전시 ID")
     message: Optional[str] = Field(None, max_length=20, description="초대 메시지 (최대 20자)")
 
 
 class InvitationInterestCreate(BaseModel):
-    """
-    초대장 관심 표현 (갈게요)
-    
-    Attributes:
-        invitation_id: 초대장 ID
-    """
-    invitation_id: int
+    """초대장 관심 표현 (갈게요)"""
+    invitation_id: int = Field(..., description="초대장 ID")
 
 
 # ============================================================================
@@ -78,20 +65,15 @@ class InvitationInterestCreate(BaseModel):
 # ============================================================================
 
 class InvitationResponse(BaseModel):
-    """
-    초대장 응답 (작가용)
-    
-    작가가 자신의 초대장 목록 조회 시 사용
-    view_count, 링크 정보 포함
-    """
-    id: int
-    code: str
-    artist: ArtistInInvitation
-    exhibition: ExhibitionInInvitation
-    message: Optional[str]
-    view_count: int  # 실제 방문자 수
-    created_at: datetime
-    updated_at: Optional[datetime]
+    """초대장 응답 (작가용)"""
+    id: int = Field(..., description="초대장 ID")
+    code: str = Field(..., description="초대 코드")
+    artist: ArtistInInvitation = Field(..., description="작가 정보")
+    exhibition: ExhibitionInInvitation = Field(..., description="전시 정보")
+    message: Optional[str] = Field(None, description="초대 메시지")
+    view_count: int = Field(..., description="조회수")
+    created_at: datetime = Field(..., description="생성일시")
+    updated_at: Optional[datetime] = Field(None, description="수정일시")
     
     @computed_field
     @property
@@ -110,18 +92,13 @@ class InvitationResponse(BaseModel):
 
 
 class InvitationPublicResponse(BaseModel):
-    """
-    초대장 공개 응답 (관객용)
-    
-    관객이 초대장 코드로 조회 시 사용
-    view_count 제외 (보안)
-    """
-    id: int
-    code: str
-    artist: ArtistInInvitation
-    exhibition: ExhibitionInInvitation
-    message: Optional[str]
-    created_at: datetime
+    """초대장 공개 응답 (관객용)"""
+    id: int = Field(..., description="초대장 ID")
+    code: str = Field(..., description="초대 코드")
+    artist: ArtistInInvitation = Field(..., description="작가 정보")
+    exhibition: ExhibitionInInvitation = Field(..., description="전시 정보")
+    message: Optional[str] = Field(None, description="초대 메시지")
+    created_at: datetime = Field(..., description="생성일시")
     
     @computed_field
     @property
@@ -134,17 +111,12 @@ class InvitationPublicResponse(BaseModel):
 
 
 class InvitationInterestResponse(BaseModel):
-    """
-    초대장 관심 표현 응답
-    
-    "갈게요" 클릭 시 응답
-    visitor_id 또는 artist_id 중 하나만 존재
-    """
-    id: int
-    invitation_id: int
-    visitor_id: Optional[int] = None
-    artist_id: Optional[int] = None
-    created_at: datetime
+    """초대장 관심 표현 응답"""
+    id: int = Field(..., description="관심 표현 ID")
+    invitation_id: int = Field(..., description="초대장 ID")
+    visitor_id: Optional[int] = Field(None, description="관람객 ID")
+    artist_id: Optional[int] = Field(None, description="작가 ID")
+    created_at: datetime = Field(..., description="생성일시")
     
     class Config:
         from_attributes = True
