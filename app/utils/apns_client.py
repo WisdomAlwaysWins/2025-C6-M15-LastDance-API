@@ -1,7 +1,7 @@
 # app/utils/apns_client.py
 import logging
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 
 from aioapns import APNs, NotificationRequest
 
@@ -21,14 +21,14 @@ class APNsClient:
         self.use_sandbox = use_sandbox
 
         key_content = Path(key_path).read_text().strip()
-        
+
         # 🔍 초기화 정보 로깅
         logger.info(f"🔧 APNs 초기화 - Sandbox: {use_sandbox}")
         logger.info(f"   Key ID: {key_id}")
         logger.info(f"   Team ID: {team_id}")
         logger.info(f"   Bundle ID: {bundle_id}")
         logger.info(f"   Key 길이: {len(key_content)} bytes")
-        
+
         self.apns = APNs(
             key=key_content,
             key_id=key_id,
@@ -36,7 +36,7 @@ class APNsClient:
             topic=bundle_id,
             use_sandbox=use_sandbox,
         )
-        
+
         logger.info("✅ APNs 클라이언트 초기화 완료")
 
     async def send_notification(
@@ -52,7 +52,7 @@ class APNsClient:
             logger.info(f"📤 푸시 전송 시도 - Token: {device_token[:20]}...")
             logger.info(f"   Title: {title}")
             logger.info(f"   Body: {body}")
-            
+
             request = NotificationRequest(
                 device_token=device_token,
                 message={
@@ -69,7 +69,7 @@ class APNsClient:
             )
 
             result = await self.apns.send_notification(request)
-            
+
             env = "Sandbox" if self.use_sandbox else "Production"
             logger.info(f"✅ [{env}] 푸시 알림 전송 성공: {device_token[:10]}...")
             logger.info(f"   Result: {result}")
@@ -80,9 +80,10 @@ class APNsClient:
             logger.error(f"   Exception Type: {type(e).__name__}")
             logger.error(f"   Exception Message: {str(e)}")
             logger.error(f"   Device Token: {device_token[:20]}...")
-            
+
             # 🔍 상세 에러 정보
             import traceback
+
             logger.error(f"   Traceback:\n{traceback.format_exc()}")
             raise
 
@@ -117,19 +118,14 @@ class APNsClient:
                     f"{type(e).__name__} - {str(e)}"
                 )
                 failed_count += 1
-                failed_tokens.append({
-                    "token": token[:20],
-                    "error": str(e)
-                })
+                failed_tokens.append({"token": token[:20], "error": str(e)})
 
-        logger.info(
-            f"일괄 전송 완료: 성공 {success_count}개, 실패 {failed_count}개"
-        )
+        logger.info(f"일괄 전송 완료: 성공 {success_count}개, 실패 {failed_count}개")
 
         return {
             "success": success_count,
             "failed": failed_count,
-            "failed_tokens": failed_tokens
+            "failed_tokens": failed_tokens,
         }
 
 

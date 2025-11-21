@@ -62,18 +62,18 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         # 요청 로깅 (줄바꿈으로 깔끔하게)
         headers = self._mask_sensitive_headers(dict(request.headers))
-        
+
         logger.info("")  # 빈 줄
         logger.info("=" * 80)
         logger.info(f"📥 요청: {request.method} {request.url.path}")
         logger.info(f"   시간: {request_time}")
         logger.info(f"   IP: {request.client.host if request.client else 'unknown'}")
-        
+
         # UUID 표시
         uuid = headers.get("x-user-uuid") or headers.get("x-artist-uuid")
         if uuid:
             logger.info(f"   UUID: {uuid}")
-        
+
         # Query Parameters
         if request.query_params:
             query_params = dict(request.query_params)
@@ -98,8 +98,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
             # ✨ 응답 로깅
             status_emoji = "✅" if response.status_code < 400 else "❌"
-            
-            logger.info(f"{status_emoji} 응답: {response.status_code} ({process_time:.2f}초)")
+
+            logger.info(
+                f"{status_emoji} 응답: {response.status_code} ({process_time:.2f}초)"
+            )
             logger.info("=" * 80)
             logger.info("")  # 빈 줄
 
@@ -122,7 +124,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         masked = {}
         for key, value in headers.items():
             key_lower = key.lower()
-            
+
             # 완전 마스킹
             if key_lower in self.SENSITIVE_HEADERS:
                 masked[key] = "***"
@@ -135,25 +137,25 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # 일반 헤더
             else:
                 masked[key] = value
-        
+
         return masked
 
     def _mask_body(self, body) -> dict:
         """Body 민감 정보 마스킹"""
         if not isinstance(body, dict):
             return body
-            
+
         safe_body = body.copy()
-        
+
         # 민감 정보 마스킹
         if "password" in safe_body:
             safe_body["password"] = "***"
         if "token" in safe_body:
             safe_body["token"] = "***"
-        
+
         # Base64 이미지는 길이만 표시
         if "image_base64" in safe_body:
             img_len = len(safe_body["image_base64"])
             safe_body["image_base64"] = f"<{img_len} bytes>"
-        
+
         return safe_body

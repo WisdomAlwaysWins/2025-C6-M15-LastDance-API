@@ -24,10 +24,10 @@ EMOJI_DESCRIPTIONS = {
 def is_valid_emoji_type(emoji_type: str) -> bool:
     """
     이모지 타입 유효성 검증
-    
+
     Args:
         emoji_type: 검증할 이모지 타입
-    
+
     Returns:
         유효 여부
     """

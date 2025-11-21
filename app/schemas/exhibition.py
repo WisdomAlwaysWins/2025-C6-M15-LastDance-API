@@ -1,6 +1,7 @@
 """
 Exhibition Schemas
 """
+
 from datetime import date, datetime
 from typing import TYPE_CHECKING, List, Optional
 
@@ -14,8 +15,10 @@ if TYPE_CHECKING:
 # Nested Schemas
 # ============================================================================
 
+
 class ArtworkSummary(BaseModel):
     """작품 요약 정보"""
+
     id: int = Field(..., description="작품 ID")
     title: str = Field(..., description="작품 제목")
     artist_name: str = Field(..., description="작가 이름")
@@ -28,6 +31,7 @@ class ArtworkSummary(BaseModel):
 
 class ArtistSummary(BaseModel):
     """작가 요약 정보"""
+
     id: int = Field(..., description="작가 ID")
     name: str = Field(..., description="작가명")
 
@@ -37,6 +41,7 @@ class ArtistSummary(BaseModel):
 
 class ExhibitionSummary(BaseModel):
     """전시 요약 정보"""
+
     id: int = Field(..., description="전시 ID")
     title: str = Field(..., description="전시 제목")
     venue_name: str = Field(..., description="전시 장소 이름")
@@ -52,8 +57,10 @@ class ExhibitionSummary(BaseModel):
 # Request Schemas
 # ============================================================================
 
+
 class ExhibitionCreate(BaseModel):
     """전시 생성 요청"""
+
     title: str = Field(..., description="전시 제목")
     description_text: Optional[str] = Field(None, description="전시 설명")
     start_date: date = Field(..., description="시작일")
@@ -65,6 +72,7 @@ class ExhibitionCreate(BaseModel):
 
 class ExhibitionUpdate(BaseModel):
     """전시 정보 수정 요청"""
+
     title: Optional[str] = Field(None, description="전시 제목")
     description_text: Optional[str] = Field(None, description="전시 설명")
     start_date: Optional[date] = Field(None, description="시작일")
@@ -78,8 +86,10 @@ class ExhibitionUpdate(BaseModel):
 # Response Schemas
 # ============================================================================
 
+
 class ExhibitionResponse(BaseModel):
     """전시 기본 응답 (리스트용)"""
+
     id: int = Field(..., description="전시 ID")
     title: str = Field(..., description="전시 제목")
     description_text: Optional[str] = Field(None, description="전시 설명")
@@ -98,6 +108,7 @@ class ExhibitionResponse(BaseModel):
 
 class ExhibitionDetail(BaseModel):
     """전시 상세 응답 (상세 조회용)"""
+
     id: int = Field(..., description="전시 ID")
     title: str = Field(..., description="전시 제목")
     description_text: Optional[str] = Field(None, description="전시 설명")

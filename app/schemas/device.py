@@ -1,18 +1,20 @@
 """
 Device Schemas
 """
+
 from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-
 # ============================================================================
 # Request Schemas
 # ============================================================================
 
+
 class DeviceTokenRegister(BaseModel):
     """디바이스 토큰 등록 요청"""
+
     visitor_id: Optional[int] = Field(None, description="관람객 ID")
     artist_id: Optional[int] = Field(None, description="작가 ID")
     device_token: str = Field(..., description="APNs 디바이스 토큰")
@@ -27,11 +29,13 @@ class DeviceTokenRegister(BaseModel):
 
 class DeviceUpdate(BaseModel):
     """디바이스 수정 요청"""
+
     is_active: bool = Field(..., description="활성 상태 (True: 활성, False: 비활성)")
 
 
 class NotificationSendRequest(BaseModel):
     """푸시 알림 전송 요청"""
+
     visitor_id: Optional[int] = Field(None, description="대상 관람객 ID")
     artist_id: Optional[int] = Field(None, description="대상 작가 ID")
     device_token: Optional[str] = Field(None, description="대상 디바이스 토큰")
@@ -53,8 +57,10 @@ class NotificationSendRequest(BaseModel):
 # Response Schemas
 # ============================================================================
 
+
 class DeviceResponse(BaseModel):
     """디바이스 정보 응답"""
+
     id: int = Field(..., description="디바이스 ID")
     visitor_id: Optional[int] = Field(None, description="관람객 ID")
     artist_id: Optional[int] = Field(None, description="작가 ID")

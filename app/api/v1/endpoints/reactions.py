@@ -6,12 +6,24 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session, joinedload
 
+from app.constants.emojis import is_valid_emoji_type
 from app.database import SessionLocal, get_db
+from app.models.artist import Artist
+from app.models.artist_reaction_emoji import ArtistReactionEmoji
+from app.models.artist_reaction_message import ArtistReactionMessage
 from app.models.artwork import Artwork
 from app.models.exhibition import Exhibition
 from app.models.reaction import Reaction
 from app.models.tag import Tag
 from app.models.visit_history import VisitHistory
+from app.schemas.artist_reaction_emoji import (
+    ArtistReactionEmojiCreate,
+    ArtistReactionEmojiResponse,
+)
+from app.schemas.artist_reaction_message import (
+    ArtistReactionMessageCreate,
+    ArtistReactionMessageResponse,
+)
 from app.schemas.reaction import (
     ReactionDetail,
     ReactionResponse,
@@ -27,27 +39,13 @@ from fastapi import (
     Depends,
     File,
     Form,
+    Header,
     HTTPException,
     Query,
     Response,
     UploadFile,
     status,
-    Header,
 )
-
-from app.models.artist import Artist
-from app.models.artist_reaction_emoji import ArtistReactionEmoji
-from app.schemas.artist_reaction_emoji import (
-    ArtistReactionEmojiCreate,
-    ArtistReactionEmojiResponse,
-)
-from app.models.artist_reaction_message import ArtistReactionMessage
-from app.schemas.artist_reaction_message import (
-    ArtistReactionMessageCreate,
-    ArtistReactionMessageResponse,
-)
-
-from app.constants.emojis import is_valid_emoji_type
 
 router = APIRouter(prefix="/reactions", tags=["Reactions"])
 
@@ -77,8 +75,10 @@ def get_reactions(
     Returns:
         List[ReactionResponse]: 반응 목록 (artwork_title, visitor_name 포함)
     """
-    logger.info(f"반응 목록 조회 시작 (artwork_id={artwork_id}, visitor_id={visitor_id}, visit_id={visit_id})")
-    
+    logger.info(
+        f"반응 목록 조회 시작 (artwork_id={artwork_id}, visitor_id={visitor_id}, visit_id={visit_id})"
+    )
+
     query = db.query(Reaction).options(
         joinedload(Reaction.artwork),
         joinedload(Reaction.visitor),
@@ -129,7 +129,7 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     반응 상세 조회 (전체 정보)
     """
     logger.info(f"반응 상세 조회 시작: ID {reaction_id}")
-    
+
     reaction = (
         db.query(Reaction)
         .options(
@@ -137,8 +137,10 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
             joinedload(Reaction.visitor),
             joinedload(Reaction.visit).joinedload(VisitHistory.exhibition),
             joinedload(Reaction.tags).joinedload(Tag.category),
-            joinedload(Reaction.artist_emojis).joinedload(ArtistReactionEmoji.artist), 
-            joinedload(Reaction.artist_messages).joinedload(ArtistReactionMessage.artist), 
+            joinedload(Reaction.artist_emojis).joinedload(ArtistReactionEmoji.artist),
+            joinedload(Reaction.artist_messages).joinedload(
+                ArtistReactionMessage.artist
+            ),
         )
         .filter(Reaction.id == reaction_id)
         .first()
@@ -154,24 +156,28 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
     # 작가 이모지 포맷팅
     artist_emojis = []
     for emoji in reaction.artist_emojis:
-        artist_emojis.append({
-            "id": emoji.id,
-            "artist_id": emoji.artist_id,
-            "artist_name": emoji.artist.name if emoji.artist else "",
-            "emoji_type": emoji.emoji_type,
-            "created_at": emoji.created_at,
-        })
+        artist_emojis.append(
+            {
+                "id": emoji.id,
+                "artist_id": emoji.artist_id,
+                "artist_name": emoji.artist.name if emoji.artist else "",
+                "emoji_type": emoji.emoji_type,
+                "created_at": emoji.created_at,
+            }
+        )
 
     # 작가 메시지 포맷팅(오래된 순)
     artist_messages = []
     for message in sorted(reaction.artist_messages, key=lambda x: x.created_at):
-        artist_messages.append({
-            "id": message.id,
-            "artist_id": message.artist_id,
-            "artist_name": message.artist.name if message.artist else "",
-            "message": message.message,
-            "created_at": message.created_at,
-        })
+        artist_messages.append(
+            {
+                "id": message.id,
+                "artist_id": message.artist_id,
+                "artist_name": message.artist.name if message.artist else "",
+                "message": message.message,
+                "created_at": message.created_at,
+            }
+        )
 
     # ReactionDetail 형식으로 변환
     result = {
@@ -215,13 +221,15 @@ def get_reaction(reaction_id: int, db: Session = Depends(get_db)):
         "comment": reaction.comment,
         "image_url": reaction.image_url,
         "tags": reaction.tags,
-        "artist_emojis": artist_emojis, 
+        "artist_emojis": artist_emojis,
         "artist_messages": artist_messages,
         "created_at": reaction.created_at,
         "updated_at": reaction.updated_at,
     }
 
-    logger.info(f"✅ 반응 조회 완료: ID {reaction_id}, 이모지 {len(artist_emojis)}개, 메시지 {len(artist_messages)}개")
+    logger.info(
+        f"✅ 반응 조회 완료: ID {reaction_id}, 이모지 {len(artist_emojis)}개, 메시지 {len(artist_messages)}개"
+    )
     return result
 
 
@@ -265,7 +273,9 @@ async def create_reaction(
         visit_id가 있으면: reactions/{env}/exhibition_{id}/visitor_{id}_{timestamp}.jpg
         visit_id가 없으면: reactions/{uuid}.jpg
     """
-    logger.info(f"반응 생성 시작: visitor_id={visitor_id}, artwork_id={artwork_id}, visit_id={visit_id}")
+    logger.info(
+        f"반응 생성 시작: visitor_id={visitor_id}, artwork_id={artwork_id}, visit_id={visit_id}"
+    )
 
     # Artwork 존재 여부 확인
     artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
@@ -361,12 +371,12 @@ async def create_reaction(
 
     # 생성 후 상세 정보 조회하여 반환
     result = get_reaction(new_reaction.id, db)
-    
+
     # 백그라운드에서 작가에게 푸시 전송
     if artwork and artwork.artist:
         # 전시 정보 찾기
         exhibition = None
-        
+
         # 1. visit_id로 전시 찾기
         if visit_id and visit:
             exhibition = (
@@ -374,7 +384,7 @@ async def create_reaction(
                 .filter(Exhibition.id == visit.exhibition_id)
                 .first()
             )
-        
+
         # 2. visit_id 없으면 작품의 첫 번째 전시 사용
         if not exhibition:
             artwork_with_exhibitions = (
@@ -385,7 +395,7 @@ async def create_reaction(
             )
             if artwork_with_exhibitions and artwork_with_exhibitions.exhibitions:
                 exhibition = artwork_with_exhibitions.exhibitions[0]
-        
+
         # 3. 전시 정보 있으면 푸시 전송
         if exhibition:
             background_tasks.add_task(
@@ -402,7 +412,7 @@ async def create_reaction(
             logger.info(
                 f"🔔 작가 ID {artwork.artist.id}에게 푸시 알림 예약 (전시: '{exhibition.title}')"
             )
-    
+
     return result
 
 
@@ -440,7 +450,7 @@ async def update_reaction(
         - tag_ids는 JSON 배열 문자열로 전달 (예: "[1,2,3]")
     """
     logger.info(f"반응 수정 시작: ID {reaction_id}")
-    
+
     reaction = (
         db.query(Reaction)
         .options(joinedload(Reaction.visit))
@@ -465,7 +475,7 @@ async def update_reaction(
     # image 수정 (새 이미지 업로드 시)
     if image is not None:
         logger.info(f"이미지 교체 시작: {image.filename}")
-        
+
         # 기존 S3 이미지 삭제
         old_image_url = reaction.image_url
         if old_image_url:
@@ -540,7 +550,9 @@ async def update_reaction(
     db.commit()
     db.refresh(reaction)
 
-    logger.info(f"✅ 반응 수정 완료: ID {reaction_id} ({', '.join(updated_fields) if updated_fields else '변경 없음'})")
+    logger.info(
+        f"✅ 반응 수정 완료: ID {reaction_id} ({', '.join(updated_fields) if updated_fields else '변경 없음'})"
+    )
 
     # 수정 후 상세 정보 조회하여 반환
     return get_reaction(reaction_id, db)
@@ -566,7 +578,7 @@ async def delete_reaction(reaction_id: int, db: Session = Depends(get_db)):
         S3에 저장된 이미지도 함께 삭제됩니다
     """
     logger.info(f"반응 삭제 시작: ID {reaction_id}")
-    
+
     reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
     if not reaction:
         logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
@@ -608,29 +620,30 @@ async def create_artist_emoji(
 ):
     """
     작가 이모지 생성
-    
+
     Args:
         reaction_id: 반응 ID
         emoji_data: 이모지 데이터
         x_artist_uuid: 작가 UUID (헤더)
     """
-    logger.info(f"작가 이모지 생성 시도: 반응 ID {reaction_id}, 작가 UUID {x_artist_uuid[:8]}..., 이모지 {emoji_data.emoji_type}")
-    
+    logger.info(
+        f"작가 이모지 생성 시도: 반응 ID {reaction_id}, 작가 UUID {x_artist_uuid[:8]}..., 이모지 {emoji_data.emoji_type}"
+    )
+
     # UUID로 작가 조회
     artist = db.query(Artist).filter(Artist.uuid == x_artist_uuid).first()
     if not artist:
         logger.warning(f"작가 UUID {x_artist_uuid[:8]}... 찾을 수 없음")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="작가를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="작가를 찾을 수 없습니다"
         )
-    
+
     # 반응 존재 확인 + joinedload로 관련 정보 가져오기
     reaction = (
         db.query(Reaction)
         .options(
             joinedload(Reaction.visit).joinedload(VisitHistory.exhibition),
-            joinedload(Reaction.artwork)
+            joinedload(Reaction.artwork),
         )
         .filter(Reaction.id == reaction_id)
         .first()
@@ -639,43 +652,51 @@ async def create_artist_emoji(
         logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다"
+            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
-    
+
     # 이모지 타입 검증
     if not is_valid_emoji_type(emoji_data.emoji_type):
         logger.warning(f"허용되지 않은 이모지 타입: {emoji_data.emoji_type}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"허용되지 않은 이모지 타입입니다"
+            detail=f"허용되지 않은 이모지 타입입니다",
         )
-    
+
     # 이미 이모지를 남겼는지 확인
-    existing_emoji = db.query(ArtistReactionEmoji).filter(
-        ArtistReactionEmoji.artist_id == artist.id,
-        ArtistReactionEmoji.reaction_id == reaction_id
-    ).first()
-    
+    existing_emoji = (
+        db.query(ArtistReactionEmoji)
+        .filter(
+            ArtistReactionEmoji.artist_id == artist.id,
+            ArtistReactionEmoji.reaction_id == reaction_id,
+        )
+        .first()
+    )
+
     if existing_emoji:
-        logger.warning(f"중복 이모지 생성 시도: 작가 '{artist.name}', 반응 ID {reaction_id}")
+        logger.warning(
+            f"중복 이모지 생성 시도: 작가 '{artist.name}', 반응 ID {reaction_id}"
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="이미 이 반응에 이모지를 남겼습니다"
+            detail="이미 이 반응에 이모지를 남겼습니다",
         )
-    
+
     # 이모지 생성
     new_emoji = ArtistReactionEmoji(
         artist_id=artist.id,
         reaction_id=reaction_id,
         emoji_type=emoji_data.emoji_type,
     )
-    
+
     db.add(new_emoji)
     db.commit()
     db.refresh(new_emoji)
-    
-    logger.info(f"✅ 작가 이모지 생성 완료: ID {new_emoji.id}, 작가 '{artist.name}', 반응 ID {reaction_id}, 타입 {emoji_data.emoji_type}")
-    
+
+    logger.info(
+        f"✅ 작가 이모지 생성 완료: ID {new_emoji.id}, 작가 '{artist.name}', 반응 ID {reaction_id}, 타입 {emoji_data.emoji_type}"
+    )
+
     # 관객에게 푸시 알림 전송 (백그라운드)
     if reaction.visit and reaction.visit.exhibition:
         background_tasks.add_task(
@@ -690,7 +711,7 @@ async def create_artist_emoji(
             reply_created_at=new_emoji.created_at,
         )
         logger.info(f"🔔 관객 ID {reaction.visitor_id}에게 이모지 응답 푸시 알림 예약")
-    
+
     return new_emoji
 
 
@@ -709,38 +730,46 @@ def delete_artist_emoji(
     """
     작가 이모지 삭제
     """
-    logger.info(f"작가 이모지 삭제 시도: 반응 ID {reaction_id}, 작가 UUID {x_artist_uuid[:8]}...")
-    
+    logger.info(
+        f"작가 이모지 삭제 시도: 반응 ID {reaction_id}, 작가 UUID {x_artist_uuid[:8]}..."
+    )
+
     # UUID로 작가 조회
     artist = db.query(Artist).filter(Artist.uuid == x_artist_uuid).first()
     if not artist:
         logger.warning(f"작가 UUID {x_artist_uuid[:8]}... 찾을 수 없음")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="작가를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="작가를 찾을 수 없습니다"
         )
-    
+
     # 이모지 조회
-    emoji = db.query(ArtistReactionEmoji).filter(
-        ArtistReactionEmoji.artist_id == artist.id,
-        ArtistReactionEmoji.reaction_id == reaction_id
-    ).first()
-    
-    if not emoji:
-        logger.warning(f"이모지 찾을 수 없음: 작가 '{artist.name}', 반응 ID {reaction_id}")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="이모지를 찾을 수 없습니다"
+    emoji = (
+        db.query(ArtistReactionEmoji)
+        .filter(
+            ArtistReactionEmoji.artist_id == artist.id,
+            ArtistReactionEmoji.reaction_id == reaction_id,
         )
-    
+        .first()
+    )
+
+    if not emoji:
+        logger.warning(
+            f"이모지 찾을 수 없음: 작가 '{artist.name}', 반응 ID {reaction_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="이모지를 찾을 수 없습니다"
+        )
+
     emoji_id = emoji.id
     emoji_type = emoji.emoji_type
-    
+
     db.delete(emoji)
     db.commit()
-    
-    logger.info(f"✅ 작가 이모지 삭제 완료: ID {emoji_id}, 작가 '{artist.name}', 타입 {emoji_type}")
-    
+
+    logger.info(
+        f"✅ 작가 이모지 삭제 완료: ID {emoji_id}, 작가 '{artist.name}', 타입 {emoji_type}"
+    )
+
     return None
 
 
@@ -760,37 +789,38 @@ async def create_artist_message(
 ):
     """
     작가 메시지 생성
-    
+
     Args:
         reaction_id: 반응 ID
         message_data: 메시지 데이터
         x_artist_uuid: 작가 UUID (헤더)
-    
+
     Returns:
         생성된 메시지 정보
-    
+
     Raises:
         401: 인증 실패
         404: 반응 또는 작가를 찾을 수 없음
         400: 메시지 길이 초과
     """
-    logger.info(f"작가 메시지 생성 시도: 반응 ID {reaction_id}, 작가 UUID {x_artist_uuid[:8]}..., 메시지 길이 {len(message_data.message)}자")
-    
+    logger.info(
+        f"작가 메시지 생성 시도: 반응 ID {reaction_id}, 작가 UUID {x_artist_uuid[:8]}..., 메시지 길이 {len(message_data.message)}자"
+    )
+
     # UUID로 작가 조회
     artist = db.query(Artist).filter(Artist.uuid == x_artist_uuid).first()
     if not artist:
         logger.warning(f"작가 UUID {x_artist_uuid[:8]}... 찾을 수 없음")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="작가를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="작가를 찾을 수 없습니다"
         )
-    
+
     # 반응 존재 확인 + joinedload로 관련 정보 가져오기
     reaction = (
         db.query(Reaction)
         .options(
             joinedload(Reaction.visit).joinedload(VisitHistory.exhibition),
-            joinedload(Reaction.artwork)
+            joinedload(Reaction.artwork),
         )
         .filter(Reaction.id == reaction_id)
         .first()
@@ -799,22 +829,24 @@ async def create_artist_message(
         logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다"
+            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
-    
+
     # 메시지 생성
     new_message = ArtistReactionMessage(
         artist_id=artist.id,
         reaction_id=reaction_id,
         message=message_data.message,
     )
-    
+
     db.add(new_message)
     db.commit()
     db.refresh(new_message)
-    
-    logger.info(f"✅ 작가 메시지 생성 완료: ID {new_message.id}, 작가 '{artist.name}', 반응 ID {reaction_id}")
-    
+
+    logger.info(
+        f"✅ 작가 메시지 생성 완료: ID {new_message.id}, 작가 '{artist.name}', 반응 ID {reaction_id}"
+    )
+
     # 관객에게 푸시 알림 전송 (백그라운드)
     if reaction.visit and reaction.visit.exhibition:
         background_tasks.add_task(
@@ -832,7 +864,7 @@ async def create_artist_message(
             f"🔔 관객 ID {reaction.visitor_id}에게 메시지 응답 푸시 알림 예약 "
             f"(전시: '{reaction.visit.exhibition.title}')"
         )
-    
+
     return new_message
 
 
@@ -848,32 +880,35 @@ def get_artist_messages(
 ):
     """
     작가 메시지 목록 조회
-    
+
     Args:
         reaction_id: 반응 ID
-    
+
     Returns:
         메시지 목록 (오래된 순)
-    
+
     Raises:
         404: 반응을 찾을 수 없음
     """
     logger.info(f"작가 메시지 목록 조회: 반응 ID {reaction_id}")
-    
+
     # 반응 존재 확인
     reaction = db.query(Reaction).filter(Reaction.id == reaction_id).first()
     if not reaction:
         logger.warning(f"반응 ID {reaction_id} 찾을 수 없음")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다"
+            detail=f"반응 ID {reaction_id}를 찾을 수 없습니다",
         )
-    
+
     # 메시지 조회 (오래된 순)
-    messages = db.query(ArtistReactionMessage).filter(
-        ArtistReactionMessage.reaction_id == reaction_id
-    ).order_by(ArtistReactionMessage.created_at.asc()).all()
-    
+    messages = (
+        db.query(ArtistReactionMessage)
+        .filter(ArtistReactionMessage.reaction_id == reaction_id)
+        .order_by(ArtistReactionMessage.created_at.asc())
+        .all()
+    )
+
     logger.info(f"✅ 작가 메시지 {len(messages)}개 조회 완료")
-    
+
     return messages

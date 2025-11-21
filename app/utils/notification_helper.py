@@ -1,6 +1,7 @@
 """
 푸시 알림 전송 헬퍼 함수
 """
+
 from datetime import datetime
 import logging
 
@@ -30,7 +31,7 @@ async def notify_reaction_to_artist(
     body = NotificationMessages.REACTION_TO_ARTIST_BODY.format(
         artwork_title=artwork_title
     )
-    
+
     # 1. DB에 알림 기록 생성
     notification = Notification(
         artist_id=artist_id,
@@ -45,9 +46,9 @@ async def notify_reaction_to_artist(
     db.add(notification)
     db.commit()
     db.refresh(notification)
-    
+
     logger.info(f"📝 알림 기록 생성 완료 (ID: {notification.id})")
-    
+
     # 2. 푸시 알림 전송
     try:
         devices = (
@@ -67,10 +68,12 @@ async def notify_reaction_to_artist(
             f"(작가: {artist.name}, ID: {artist.id})"
         )
 
-        logger.info(f"📤 푸시 내용 - 제목: {title}, 본문: {body}") 
+        logger.info(f"📤 푸시 내용 - 제목: {title}, 본문: {body}")
 
         apns = get_apns_client(use_sandbox=settings.APNS_USE_SANDBOX)
-        logger.info(f"🔧 APNs 모드: {'Sandbox' if settings.APNS_USE_SANDBOX else 'Production'}")
+        logger.info(
+            f"🔧 APNs 모드: {'Sandbox' if settings.APNS_USE_SANDBOX else 'Production'}"
+        )
 
         device_tokens = [d.device_token for d in devices]
         result = await apns.send_batch_notification(
@@ -94,17 +97,19 @@ async def notify_reaction_to_artist(
             f"푸시 전송: 성공 {result['success']}개, 실패 {result['failed']}개"
         )
 
-        if result['failed'] > 0:
+        if result["failed"] > 0:
             logger.error(f"❌ 푸시 전송 실패 상세: {result}")
-        
+
         # 3. 전송 성공 시 is_sent 업데이트
-        if result['success'] > 0:
+        if result["success"] > 0:
             notification.is_sent = True
             db.commit()
             logger.info(f"✅ 알림 전송 상태 업데이트 완료 (ID: {notification.id})")
 
     except Exception as e:
-        logger.error(f"❌ 작가 푸시 전송 실패 (Artist ID {artist_id}): {e}", exc_info=True)
+        logger.error(
+            f"❌ 작가 푸시 전송 실패 (Artist ID {artist_id}): {e}", exc_info=True
+        )
 
 
 async def notify_artist_reply_to_visitor(
@@ -120,7 +125,7 @@ async def notify_artist_reply_to_visitor(
     """작가가 응답했을 때 관람객에게 알림"""
     title = exhibition_title
     body = NotificationMessages.ARTIST_REPLY_BODY
-    
+
     # 1. DB에 알림 기록 생성
     notification = Notification(
         visitor_id=visitor_id,
@@ -136,9 +141,9 @@ async def notify_artist_reply_to_visitor(
     db.add(notification)
     db.commit()
     db.refresh(notification)
-    
+
     logger.info(f"📝 알림 기록 생성 완료 (ID: {notification.id})")
-    
+
     # 2. 푸시 알림 전송
     try:
         devices = (
@@ -151,7 +156,7 @@ async def notify_artist_reply_to_visitor(
         if not devices:
             logger.info(f"관람객 ID {visitor_id}의 등록된 디바이스 없음")
             return
-        
+
         visitor = devices[0].visitor
         logger.info(
             f"✅ 발견된 디바이스 {len(devices)}개 "
@@ -161,7 +166,9 @@ async def notify_artist_reply_to_visitor(
         logger.info(f"📤 푸시 내용 - 제목: {title}, 본문: {body}")
 
         apns = get_apns_client(use_sandbox=settings.APNS_USE_SANDBOX)
-        logger.info(f"🔧 APNs 모드: {'Sandbox' if settings.APNS_USE_SANDBOX else 'Production'}")
+        logger.info(
+            f"🔧 APNs 모드: {'Sandbox' if settings.APNS_USE_SANDBOX else 'Production'}"
+        )
 
         device_tokens = [d.device_token for d in devices]
         result = await apns.send_batch_notification(
@@ -180,23 +187,25 @@ async def notify_artist_reply_to_visitor(
             badge=1,
         )
 
-        if result['failed'] > 0:
+        if result["failed"] > 0:
             logger.error(f"❌ 푸시 전송 실패 상세: {result}")
-        
-        if result['success'] == 0:
+
+        if result["success"] == 0:
             raise Exception(f"모든 디바이스 전송 실패: {result['failed_tokens']}")
-        
+
         logger.info(
             f"✅ 관람객 '{visitor.name or 'Anonymous'}'(ID {visitor_id})에게 "
             f"푸시 전송: 성공 {result['success']}개, 실패 {result['failed']}개"
         )
-        
+
         # 3. 전송 성공 시 is_sent 업데이트
-        if result['success'] > 0:
+        if result["success"] > 0:
             notification.is_sent = True
             db.commit()
             logger.info(f"✅ 알림 전송 상태 업데이트 완료 (ID: {notification.id})")
 
     except Exception as e:
-        logger.error(f"❌ 관람객 푸시 전송 실패 (Visitor ID {visitor_id}): {e}", exc_info=True)
+        logger.error(
+            f"❌ 관람객 푸시 전송 실패 (Visitor ID {visitor_id}): {e}", exc_info=True
+        )
         raise

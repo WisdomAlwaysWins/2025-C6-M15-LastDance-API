@@ -1,6 +1,7 @@
 """
 Visit History Schemas
 """
+
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
@@ -11,13 +12,14 @@ if TYPE_CHECKING:
 
 from app.schemas.reaction import ReactionSummary
 
-
 # ============================================================================
 # Nested Schemas
 # ============================================================================
 
+
 class VisitHistorySummary(BaseModel):
     """방문 기록 요약 정보"""
+
     id: int = Field(..., description="방문 기록 ID")
     exhibition_id: int = Field(..., description="전시 ID")
     exhibition_title: str = Field(..., description="전시 제목")
@@ -31,8 +33,10 @@ class VisitHistorySummary(BaseModel):
 # Request Schemas
 # ============================================================================
 
+
 class VisitHistoryCreate(BaseModel):
     """전시 방문 기록 생성 요청"""
+
     visitor_id: int = Field(..., description="관람객 ID")
     exhibition_id: int = Field(..., description="전시 ID")
 
@@ -41,8 +45,10 @@ class VisitHistoryCreate(BaseModel):
 # Response Schemas
 # ============================================================================
 
+
 class VisitHistoryResponse(BaseModel):
     """방문 기록 기본 응답 (리스트용)"""
+
     id: int = Field(..., description="방문 기록 ID")
     visitor_id: int = Field(..., description="관람객 ID")
     visitor_name: Optional[str] = Field(None, description="관람객 이름")
@@ -57,6 +63,7 @@ class VisitHistoryResponse(BaseModel):
 
 class VisitHistoryDetail(BaseModel):
     """방문 기록 상세 응답 (상세 조회용)"""
+
     id: int = Field(..., description="방문 기록 ID")
     visitor_id: int = Field(..., description="관람객 ID")
     visitor_name: Optional[str] = Field(None, description="관람객 이름")

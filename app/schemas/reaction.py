@@ -1,6 +1,7 @@
 """
 Reaction Schemas
 """
+
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
@@ -18,8 +19,10 @@ if TYPE_CHECKING:
 # Nested Schemas
 # ============================================================================
 
+
 class ReactionSummary(BaseModel):
     """반응 요약 정보"""
+
     id: int = Field(..., description="반응 ID")
     artwork_id: int = Field(..., description="작품 ID")
     artwork_title: str = Field(..., description="작품 제목")
@@ -32,24 +35,26 @@ class ReactionSummary(BaseModel):
 
 class ArtistReactionEmojiInReaction(BaseModel):
     """반응에 포함되는 작가 이모지 정보"""
+
     id: int = Field(..., description="이모지 ID")
     artist_id: int = Field(..., description="작가 ID")
     artist_name: str = Field(..., description="작가명")
     emoji_type: str = Field(..., description="이모지 타입")
     created_at: datetime = Field(..., description="생성일시")
-    
+
     class Config:
         from_attributes = True
 
 
 class ArtistReactionMessageInReaction(BaseModel):
     """반응에 포함되는 작가 메시지 정보"""
+
     id: int = Field(..., description="메시지 ID")
     artist_id: int = Field(..., description="작가 ID")
     artist_name: str = Field(..., description="작가명")
     message: str = Field(..., description="메시지 내용")
     created_at: datetime = Field(..., description="생성일시")
-    
+
     class Config:
         from_attributes = True
 
@@ -58,8 +63,10 @@ class ArtistReactionMessageInReaction(BaseModel):
 # Request Schemas
 # ============================================================================
 
+
 class ReactionBase(BaseModel):
     """작품 반응 기본 속성"""
+
     artwork_id: int = Field(..., description="작품 ID")
     visitor_id: int = Field(..., description="관람객 ID")
     visit_id: Optional[int] = Field(None, description="방문 기록 ID")
@@ -69,6 +76,7 @@ class ReactionBase(BaseModel):
 
 class ReactionCreate(BaseModel):
     """작품 반응 생성 요청"""
+
     artwork_id: int = Field(..., description="작품 ID")
     visitor_id: int = Field(..., description="관람객 ID")
     visit_id: Optional[int] = Field(None, description="방문 기록 ID")
@@ -87,6 +95,7 @@ class ReactionCreate(BaseModel):
 
 class ReactionUpdate(BaseModel):
     """작품 반응 수정 요청"""
+
     comment: Optional[str] = Field(None, description="코멘트")
     image_url: Optional[str] = Field(None, description="촬영한 작품 사진 URL")
     tag_ids: Optional[List[int]] = Field(None, description="태그 ID 목록")
@@ -104,8 +113,10 @@ class ReactionUpdate(BaseModel):
 # Response Schemas
 # ============================================================================
 
+
 class ReactionResponse(BaseModel):
     """작품 반응 기본 응답 (리스트용)"""
+
     id: int = Field(..., description="반응 ID")
     artwork_id: int = Field(..., description="작품 ID")
     artwork_title: str = Field(..., description="작품 제목")
@@ -124,6 +135,7 @@ class ReactionResponse(BaseModel):
 
 class ReactionDetail(BaseModel):
     """작품 반응 상세 응답 (상세 조회용)"""
+
     id: int = Field(..., description="반응 ID")
     artwork_id: int = Field(..., description="작품 ID")
     artwork: "ArtworkResponse" = Field(..., description="작품 정보")
@@ -134,8 +146,12 @@ class ReactionDetail(BaseModel):
     comment: Optional[str] = Field(None, description="코멘트")
     image_url: Optional[str] = Field(None, description="촬영한 작품 사진 URL")
     tags: List[TagResponse] = Field([], description="태그 목록")
-    artist_emojis: List[ArtistReactionEmojiInReaction] = Field([], description="작가 이모지 목록")
-    artist_messages: List[ArtistReactionMessageInReaction] = Field([], description="작가 메시지 목록")
+    artist_emojis: List[ArtistReactionEmojiInReaction] = Field(
+        [], description="작가 이모지 목록"
+    )
+    artist_messages: List[ArtistReactionMessageInReaction] = Field(
+        [], description="작가 메시지 목록"
+    )
     created_at: datetime = Field(..., description="생성일시")
     updated_at: Optional[datetime] = Field(None, description="수정일시")
 

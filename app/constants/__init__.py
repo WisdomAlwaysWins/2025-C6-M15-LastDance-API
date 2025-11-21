@@ -1,6 +1,7 @@
 """
 Constants
 """
+
 from app.constants.emojis import (
     ALLOWED_EMOJI_TYPES,
     EMOJI_DESCRIPTIONS,
@@ -16,7 +17,6 @@ __all__ = [
     "ALLOWED_EMOJI_TYPES",
     "EMOJI_DESCRIPTIONS",
     "is_valid_emoji_type",
-    
     # Notifications
     "NotificationMessages",
     "NotificationType",
