@@ -41,12 +41,26 @@ jobs:
                   key: ${{ secrets.PROD_SERVER_SSH_KEY }}
                   script: |
                       cd ~/2025-C6-M15-LastDance-API/
+
+                      # Git 업데이트
+                      git fetch origin
+                      git checkout master
+                      git pull origin master
+
+                      # Docker 이미지 업데이트
                       docker-compose pull api
-                      docker-compose up -d
+
+                      # 컨테이너 재시작
+                      docker-compose down
+                      docker-compose up -d --build
+
+                      # 오래된 이미지 정리
+                      docker image prune -f
+
                       echo "Production deployment completed: ${{ steps.get_version.outputs.VERSION }}"
 
             - name: Health Check
               run: |
                   sleep 10
-                  curl -f http://${{ secrets.PROD_SERVER_HOST }}:8000/health || exit 1
+                  curl -f https://woa-art.com/health || exit 1
                   echo "Health check passed"
