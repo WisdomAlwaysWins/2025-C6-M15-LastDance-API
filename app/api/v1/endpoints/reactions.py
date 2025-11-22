@@ -237,7 +237,7 @@ async def create_reaction(
     visitor_id: int = Form(...),
     artwork_id: int = Form(...),
     visit_id: int = Form(...),
-    comment: Optional[str] = Form(None),
+    comment: str = Form(...),
     tag_ids: Optional[str] = Form(None),
     image: UploadFile = File(...),
     db: Session = Depends(get_db),

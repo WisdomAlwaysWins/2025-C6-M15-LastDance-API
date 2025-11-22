@@ -49,17 +49,9 @@ class ReactionCreate(BaseModel):
     artwork_id: int = Field(..., description="작품 ID")
     visitor_id: int = Field(..., description="관람객 ID")
     visit_id: Optional[int] = Field(None, description="방문 기록 ID")
-    comment: Optional[str] = Field(None, description="코멘트")
+    comment: str = Field(..., description="코멘트")
     image_url: Optional[str] = Field(None, description="촬영한 작품 사진 URL")
     tag_ids: Optional[List[int]] = Field(None, description="태그 ID 목록")
-
-    @validator("tag_ids")
-    def validate_reaction_content(cls, tag_ids, values):
-        """comment 또는 tag_ids 중 하나는 필수"""
-        comment = values.get("comment")
-        if not comment and not tag_ids:
-            raise ValueError("comment 또는 tag_ids 중 하나는 필수입니다")
-        return tag_ids
 
 
 class ReactionUpdate(BaseModel):
