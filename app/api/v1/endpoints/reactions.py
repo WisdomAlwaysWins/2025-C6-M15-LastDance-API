@@ -247,7 +247,7 @@ async def create_reaction(
     visit_id: int = Form(...),
     comment: str = Form(...),
     tag_ids: Optional[str] = Form(None),
-    image: UploadFile = File(...),
+    image: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     """
@@ -311,29 +311,31 @@ async def create_reaction(
         logger.info(f"Exhibition ID 추출: {exhibition_id} (Visit ID: {visit_id})")
 
     # S3에 이미지 업로드
-    try:
-        logger.info(f"S3 업로드 시작: {image.filename}")
-        image_url = await s3_client.upload_file(
-            file=image,
-            folder="reactions",
-            exhibition_id=exhibition_id,  # visit_id가 있으면 전시 ID 전달
-            visitor_id=visitor_id,  # 관람객 ID 전달
-        )
-        logger.info(f"✅ S3 업로드 성공: {image_url}")
-    except Exception as e:
-        logger.error(f"❌ S3 업로드 실패: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"이미지 업로드 실패: {str(e)}",
-        )
-
+    image_url = None
+    if image:
+        try:
+            logger.info(f"S3 업로드 시작: {image.filename}")
+            image_url = await s3_client.upload_file(
+                file=image,
+                folder="reactions",
+                exhibition_id=exhibition_id,
+                visitor_id=visitor_id,
+            )
+            logger.info(f"✅ S3 업로드 성공: {image_url}")
+        except Exception as e:
+            logger.error(f"❌ S3 업로드 실패: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"이미지 업로드 실패: {str(e)}",
+            )
+    
     # Reaction 생성
     new_reaction = Reaction(
         visitor_id=visitor_id,
         artwork_id=artwork_id,
         visit_id=visit_id,
         comment=comment,
-        image_url=image_url,
+        image_url=image_url,  # None일 수도 있음
     )
     db.add(new_reaction)
     db.commit()
