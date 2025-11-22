@@ -58,7 +58,7 @@ def get_exhibitions(
         404: 존재하지 않는 venue_id
     """
     logger.info(f"전시 목록 조회 시작 (status={status}, venue_id={venue_id})")
-    
+
     # Venue 존재 여부 확인
     if venue_id:
         venue = db.query(Venue).filter(Venue.id == venue_id).first()
@@ -143,7 +143,7 @@ def get_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
         404: 전시를 찾을 수 없음
     """
     logger.info(f"전시 상세 조회 시작: ID {exhibition_id}")
-    
+
     # 전시 조회 (관계 데이터 포함)
     exhibition = (
         db.query(Exhibition)
@@ -197,7 +197,9 @@ def get_exhibition(exhibition_id: int, db: Session = Depends(get_db)):
         "updated_at": exhibition.updated_at,
     }
 
-    logger.info(f"✅ 전시 '{exhibition.title}' 조회 완료 (작품 {len(exhibition.artworks)}개, 작가 {len(artists_dict)}명)")
+    logger.info(
+        f"✅ 전시 '{exhibition.title}' 조회 완료 (작품 {len(exhibition.artworks)}개, 작가 {len(artists_dict)}명)"
+    )
     return result
 
 
@@ -239,8 +241,10 @@ async def create_exhibition(
         404: 존재하지 않는 venue_id 또는 artwork_ids
         500: S3 업로드 실패
     """
-    logger.info(f"전시 생성 시작: '{title}' (venue_id={venue_id}, {start_date} ~ {end_date})")
-    
+    logger.info(
+        f"전시 생성 시작: '{title}' (venue_id={venue_id}, {start_date} ~ {end_date})"
+    )
+
     # 날짜 검증
     if start_date > end_date:
         logger.warning(f"날짜 검증 실패: 시작일({start_date}) > 종료일({end_date})")
@@ -294,10 +298,8 @@ async def create_exhibition(
         try:
             artwork_id_list = json.loads(artwork_ids)
             logger.info(f"작품 연결 시도: {len(artwork_id_list)}개")
-            
-            artworks = (
-                db.query(Artwork).filter(Artwork.id.in_(artwork_id_list)).all()
-            )
+
+            artworks = db.query(Artwork).filter(Artwork.id.in_(artwork_id_list)).all()
 
             found_ids = {artwork.id for artwork in artworks}
             missing_ids = set(artwork_id_list) - found_ids
@@ -305,7 +307,9 @@ async def create_exhibition(
                 # 생성된 Exhibition 삭제
                 db.delete(new_exhibition)
                 db.commit()
-                logger.warning(f"작품 ID {sorted(missing_ids)} 찾을 수 없음, 전시 생성 롤백")
+                logger.warning(
+                    f"작품 ID {sorted(missing_ids)} 찾을 수 없음, 전시 생성 롤백"
+                )
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"작품 ID {sorted(missing_ids)}를 찾을 수 없습니다",
@@ -324,8 +328,10 @@ async def create_exhibition(
                 detail="artwork_ids는 유효한 JSON 배열 문자열이어야 합니다",
             )
 
-    logger.info(f"✅ 전시 생성 완료: '{title}' (ID: {new_exhibition.id}, 장소: {venue.name})")
-    
+    logger.info(
+        f"✅ 전시 생성 완료: '{title}' (ID: {new_exhibition.id}, 장소: {venue.name})"
+    )
+
     # 생성 후 상세 정보 조회하여 반환
     return get_exhibition(int(new_exhibition.id), db)
 
@@ -370,7 +376,7 @@ async def update_exhibition(
         500: S3 업로드 실패
     """
     logger.info(f"전시 수정 시작: ID {exhibition_id}")
-    
+
     exhibition = db.query(Exhibition).filter(Exhibition.id == exhibition_id).first()
     if not exhibition:
         logger.warning(f"전시 ID {exhibition_id} 찾을 수 없음")
@@ -420,7 +426,7 @@ async def update_exhibition(
     # 커버 이미지 교체
     if cover_image is not None:
         logger.info(f"커버 이미지 교체 시작: {cover_image.filename}")
-        
+
         # 기존 S3 이미지 삭제
         old_cover_url = exhibition.cover_image_url
         if old_cover_url:
@@ -452,10 +458,8 @@ async def update_exhibition(
         try:
             artwork_id_list = json.loads(artwork_ids)
             logger.info(f"작품 관계 수정: {len(artwork_id_list)}개")
-            
-            artworks = (
-                db.query(Artwork).filter(Artwork.id.in_(artwork_id_list)).all()
-            )
+
+            artworks = db.query(Artwork).filter(Artwork.id.in_(artwork_id_list)).all()
 
             found_ids = {artwork.id for artwork in artworks}
             missing_ids = set(artwork_id_list) - found_ids
@@ -480,8 +484,10 @@ async def update_exhibition(
     db.commit()
     db.refresh(exhibition)
 
-    logger.info(f"✅ 전시 수정 완료: '{exhibition.title}' (ID: {exhibition_id}, {', '.join(updated_fields) if updated_fields else '변경 없음'})")
-    
+    logger.info(
+        f"✅ 전시 수정 완료: '{exhibition.title}' (ID: {exhibition_id}, {', '.join(updated_fields) if updated_fields else '변경 없음'})"
+    )
+
     # 수정 후 상세 정보 조회하여 반환
     return get_exhibition(exhibition_id, db)
 
@@ -510,7 +516,7 @@ async def delete_exhibition(
         S3에 저장된 커버 이미지도 함께 삭제됩니다
     """
     logger.info(f"전시 삭제 시작: ID {exhibition_id}")
-    
+
     exhibition = db.query(Exhibition).filter(Exhibition.id == exhibition_id).first()
     if not exhibition:
         logger.warning(f"전시 ID {exhibition_id} 찾을 수 없음")
@@ -520,7 +526,7 @@ async def delete_exhibition(
         )
 
     exhibition_title = exhibition.title
-    
+
     # S3에서 커버 이미지 삭제
     if exhibition.cover_image_url:
         try:

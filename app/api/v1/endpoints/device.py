@@ -66,9 +66,7 @@ def register_device_token(data: DeviceTokenRegister, db: Session = Depends(get_d
             )
 
     # 기존 토큰 확인
-    existing = (
-        db.query(Device).filter(Device.device_token == data.device_token).first()
-    )
+    existing = db.query(Device).filter(Device.device_token == data.device_token).first()
 
     if existing:
         # visitor_id, artist_id 업데이트
@@ -76,7 +74,7 @@ def register_device_token(data: DeviceTokenRegister, db: Session = Depends(get_d
         existing.artist_id = data.artist_id
         existing.is_active = True  # Boolean
         db.commit()
-        
+
         user_type = "관람객" if data.visitor_id else "작가"
         user_id = data.visitor_id or data.artist_id
         logger.info(
@@ -111,7 +109,7 @@ def register_device_token(data: DeviceTokenRegister, db: Session = Depends(get_d
 )
 def update_device(
     device_id: int,
-    device_data: DeviceUpdate, 
+    device_data: DeviceUpdate,
     db: Session = Depends(get_db),
 ):
     """
@@ -128,24 +126,23 @@ def update_device(
         404: 존재하지 않는 디바이스
     """
     logger.info(f"디바이스 상태 변경 시도: ID {device_id}")
-    
+
     device = db.query(Device).filter(Device.id == device_id).first()
-    
+
     if not device:
         logger.warning(f"디바이스 ID {device_id} 찾을 수 없음")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="디바이스를 찾을 수 없습니다"
+            status_code=status.HTTP_404_NOT_FOUND, detail="디바이스를 찾을 수 없습니다"
         )
-    
+
     device.is_active = device_data.is_active
     db.commit()
     db.refresh(device)
-    
+
     logger.info(
         f"✅ 디바이스 상태 변경 완료: ID {device_id} → {'활성' if device.is_active else '비활성'}"
     )
-    
+
     return device
 
 
@@ -168,7 +165,7 @@ def unregister_device_token(device_token: str, db: Session = Depends(get_db)):
         404: 존재하지 않는 디바이스 토큰
     """
     logger.info(f"디바이스 토큰 비활성화 시도: {device_token[:10]}...")
-    
+
     device = db.query(Device).filter(Device.device_token == device_token).first()
 
     if not device:
@@ -209,7 +206,7 @@ def get_visitor_devices(
         404: 존재하지 않는 관람객
     """
     logger.info(f"관람객 디바이스 목록 조회: visitor_id={visitor_id}")
-    
+
     visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:
         logger.warning(f"관람객 ID {visitor_id} 찾을 수 없음")
@@ -252,7 +249,7 @@ def get_artist_devices(
         404: 존재하지 않는 작가
     """
     logger.info(f"작가 디바이스 목록 조회: artist_id={artist_id}")
-    
+
     artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
         logger.warning(f"작가 ID {artist_id} 찾을 수 없음")

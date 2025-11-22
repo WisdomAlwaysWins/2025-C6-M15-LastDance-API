@@ -66,8 +66,10 @@ def get_artworks(
     Raises:
         404: 존재하지 않는 artist_id 또는 exhibition_id
     """
-    logger.info(f"작품 목록 조회 시작 (artist_id={artist_id}, exhibition_id={exhibition_id})")
-    
+    logger.info(
+        f"작품 목록 조회 시작 (artist_id={artist_id}, exhibition_id={exhibition_id})"
+    )
+
     # Artist 존재 여부 확인
     if artist_id:
         artist = db.query(Artist).filter(Artist.id == artist_id).first()
@@ -150,7 +152,7 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
         404: 작품을 찾을 수 없음
     """
     logger.info(f"작품 상세 조회 시작: ID {artwork_id}")
-    
+
     # 작품 조회 (관계 데이터 포함)
     artwork = (
         db.query(Artwork)
@@ -195,7 +197,9 @@ def get_artwork(artwork_id: int, db: Session = Depends(get_db)):
         "updated_at": artwork.updated_at,
     }
 
-    logger.info(f"✅ 작품 '{artwork.title}' 조회 완료 (반응 {len(artwork.reactions)}개, 전시 {len(artwork.exhibitions)}개)")
+    logger.info(
+        f"✅ 작품 '{artwork.title}' 조회 완료 (반응 {len(artwork.reactions)}개, 전시 {len(artwork.exhibitions)}개)"
+    )
     return result
 
 
@@ -239,7 +243,7 @@ async def create_artwork(
         - 임베딩은 백그라운드에서 자동 생성 (약 3초)
     """
     logger.info(f"작품 생성 시작: '{title}' (작가 ID: {artist_id})")
-    
+
     # Artist 존재 여부 확인
     artist = db.query(Artist).filter(Artist.id == artist_id).first()
     if not artist:
@@ -283,8 +287,10 @@ async def create_artwork(
         db=SessionLocal(),
     )
 
-    logger.info(f"✅ 작품 생성 완료: '{title}' (ID: {new_artwork.id}, 작가: {artist.name})")
-    
+    logger.info(
+        f"✅ 작품 생성 완료: '{title}' (ID: {new_artwork.id}, 작가: {artist.name})"
+    )
+
     # 생성 후 상세 정보 조회하여 반환
     return get_artwork(int(new_artwork.id), db)
 
@@ -330,7 +336,7 @@ async def update_artwork(
         - 이미지 교체 시 임베딩 재생성
     """
     logger.info(f"작품 수정 시작: ID {artwork_id}")
-    
+
     artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
     if not artwork:
         logger.warning(f"작품 ID {artwork_id} 찾을 수 없음")
@@ -367,7 +373,7 @@ async def update_artwork(
     # 썸네일 이미지 교체
     if thumbnail is not None:
         logger.info(f"썸네일 교체 시작: {thumbnail.filename}")
-        
+
         # 기존 S3 이미지 삭제
         old_thumbnail_url = artwork.thumbnail_url
         if old_thumbnail_url:
@@ -405,8 +411,10 @@ async def update_artwork(
     db.commit()
     db.refresh(artwork)
 
-    logger.info(f"✅ 작품 수정 완료: ID {artwork_id} ({', '.join(updated_fields) if updated_fields else '변경 없음'})")
-    
+    logger.info(
+        f"✅ 작품 수정 완료: ID {artwork_id} ({', '.join(updated_fields) if updated_fields else '변경 없음'})"
+    )
+
     # 수정 후 상세 정보 조회하여 반환
     return get_artwork(artwork_id, db)
 
@@ -435,7 +443,7 @@ async def delete_artwork(
         S3에 저장된 썸네일 이미지도 함께 삭제됩니다
     """
     logger.info(f"작품 삭제 시작: ID {artwork_id}")
-    
+
     artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
     if not artwork:
         logger.warning(f"작품 ID {artwork_id} 찾을 수 없음")
@@ -445,7 +453,7 @@ async def delete_artwork(
         )
 
     artwork_title = artwork.title
-    
+
     # S3에서 썸네일 삭제
     if artwork.thumbnail_url:
         try:
@@ -522,7 +530,7 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
         logger.info("=" * 60)
         logger.info("🔍 작품 이미지 매칭 시작")
         logger.info(f"   📊 요청 Threshold: {request.threshold}")
-        
+
         # 1. 입력 검증
         if not request.image_base64:
             logger.warning("이미지가 제공되지 않음")
@@ -533,7 +541,7 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
 
         size_mb = len(request.image_base64) / 1024 / 1024
         logger.info(f"   🖼️  원본 이미지 크기: {size_mb:.2f}MB")
-        
+
         if size_mb > 50:
             logger.warning(f"이미지 크기 초과: {size_mb:.2f}MB")
             raise HTTPException(
@@ -589,19 +597,19 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
 
         # 검색 결과 상세 로깅
         logger.info(f"   📊 검색 결과: {len(results)}개 작품 매칭")
-        
+
         if results:
             # 유사도 통계
             similarities = [float(r.similarity) for r in results]
             max_sim = max(similarities)
             min_sim = min(similarities)
             avg_sim = sum(similarities) / len(similarities)
-            
+
             logger.info(f"   📈 유사도 통계:")
             logger.info(f"      - 최고: {max_sim:.4f}")
             logger.info(f"      - 최저: {min_sim:.4f}")
             logger.info(f"      - 평균: {avg_sim:.4f}")
-            
+
             # 상위 3개 결과 로깅
             logger.info(f"   🎯 상위 매칭 작품:")
             for idx, r in enumerate(results[:3], 1):
@@ -609,7 +617,7 @@ async def match_artwork(request: ArtworkMatchRequest, db: Session = Depends(get_
                     f"      [{idx}] {r.title} "
                     f"(유사도: {r.similarity:.4f}, ID: {r.id})"
                 )
-            
+
             # 전체 결과는 DEBUG 레벨에
             if len(results) > 3:
                 logger.debug(f"   📋 전체 매칭 결과:")

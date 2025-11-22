@@ -39,7 +39,9 @@ class Exhibition(Base):
     visits = relationship(
         "VisitHistory", back_populates="exhibition", cascade="all, delete-orphan"
     )
-    invitations = relationship("Invitation", back_populates="exhibition", cascade="all, delete-orphan") 
+    invitations = relationship(
+        "Invitation", back_populates="exhibition", cascade="all, delete-orphan"
+    )
     notifications = relationship("Notification", back_populates="exhibition")
 
     def __repr__(self):

@@ -1,6 +1,6 @@
 # app/api/v1/endpoints/visitors.py
-from typing import List
 import logging
+from typing import List
 
 from sqlalchemy.orm import Session
 
@@ -114,8 +114,10 @@ def create_visitor(visitor_data: VisitorCreate, db: Session = Depends(get_db)):
     Raises:
         400: 중복된 UUID
     """
-    logger.info(f"관람객 생성 시도: UUID {visitor_data.uuid[:8]}..., 이름 '{visitor_data.name}'")
-    
+    logger.info(
+        f"관람객 생성 시도: UUID {visitor_data.uuid[:8]}..., 이름 '{visitor_data.name}'"
+    )
+
     # UUID 중복 체크
     existing = db.query(Visitor).filter(Visitor.uuid == visitor_data.uuid).first()
     if existing:
@@ -129,7 +131,7 @@ def create_visitor(visitor_data: VisitorCreate, db: Session = Depends(get_db)):
     db.add(new_visitor)
     db.commit()
     db.refresh(new_visitor)
-    
+
     logger.info(f"✅ 관람객 생성 완료: ID {new_visitor.id}, 이름 '{new_visitor.name}'")
     return new_visitor
 
@@ -157,7 +159,7 @@ def update_visitor(
         404: 관람객을 찾을 수 없음
     """
     logger.info(f"관람객 수정 시작: ID {visitor_id}")
-    
+
     visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:
         logger.warning(f"관람객 ID {visitor_id} 찾을 수 없음")
@@ -173,8 +175,10 @@ def update_visitor(
 
     db.commit()
     db.refresh(visitor)
-    
-    logger.info(f"✅ 관람객 수정 완료: ID {visitor_id}, '{old_name}' → '{visitor.name}'")
+
+    logger.info(
+        f"✅ 관람객 수정 완료: ID {visitor_id}, '{old_name}' → '{visitor.name}'"
+    )
     return visitor
 
 
@@ -195,7 +199,7 @@ def delete_visitor(visitor_id: int, db: Session = Depends(get_db)):
         404: 관람객을 찾을 수 없음
     """
     logger.info(f"관람객 삭제 시작: ID {visitor_id}")
-    
+
     visitor = db.query(Visitor).filter(Visitor.id == visitor_id).first()
     if not visitor:
         logger.warning(f"관람객 ID {visitor_id} 찾을 수 없음")
@@ -207,6 +211,6 @@ def delete_visitor(visitor_id: int, db: Session = Depends(get_db)):
     visitor_name = visitor.name
     db.delete(visitor)
     db.commit()
-    
+
     logger.info(f"✅ 관람객 삭제 완료: '{visitor_name}' (ID: {visitor_id})")
     return None
